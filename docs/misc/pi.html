@@ -1,0 +1,91 @@
+ <!DOCTYPE html>
+<html>
+<head>
+    <title>Page Title</title>
+    <script src="plotly-latest.min.js"></script>
+</head>
+<body>
+
+    <h1>Humble Pi</h1>
+    <h2> Number of points placed </h3>
+    <p id="n">0</p>
+    <h2> Current estimate of Pi </h3>
+    <p id="pi">0</p>
+    <div id="myDiv" style="width:600px;height:600px;"></div>
+
+</body>
+</html>
+
+<script>
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+var n = 100;
+var x = [], y = [];
+var inside = 0, total = 0;
+var i = 0;
+var dt = 0.015;
+
+
+Plotly.newPlot('myDiv', [{
+  x: x,
+  y: y,
+  mode: 'markers'
+}], {
+  xaxis: {range: [-1.02, 1.02]},
+  yaxis: {range: [-1.02, 1.02]},
+  shapes: [
+
+    // Unfilled Circle
+
+    {
+      type: 'circle',
+      xref: 'x',
+      yref: 'y',
+      x0: -1,
+      y0: -1,
+      x1: 1,
+      y1: 1,
+      line: {
+        color: 'rgba(171, 50, 96, 1)'
+      }
+    },
+    ]
+})
+
+function compute () {
+    x[i] = Math.random()*2-1;
+    y[i] = Math.random()*2-1;
+    total = total + 1;
+    if(x[i]*x[i] + y[i]*y[i] < 1){
+        inside = inside + 1;
+    }
+    i = i + 1;
+    document.getElementById("pi").innerHTML = 4*inside/total;
+    document.getElementById("n").innerHTML = total;
+}
+
+async function update () {
+  await sleep(1000);
+  compute();
+
+  Plotly.animate('myDiv', {
+    data: [{x: x, y: y}],
+  },
+  {
+    transition: {
+      duration: 0
+    },
+    frame: {
+      duration: 0,
+      redraw: false
+    },
+  });
+
+  requestAnimationFrame(update);
+}
+
+requestAnimationFrame(update);
+
+</script>
