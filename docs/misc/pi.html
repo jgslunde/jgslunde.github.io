@@ -10,8 +10,17 @@
     <h2> Number of points placed </h3>
     <p id="n">0</p>
     <h2> Current estimate of Pi </h3>
+    <p>(Equal to 4 times the number of points inside the circle, divided by total number of points)</p>
     <p id="pi">0</p>
+
+    <h2> Speed </h3>
+    <button onclick="SloowFunction()">Sloooow</button>
+    <button onclick="SlowFunction()">Slow</button>
+    <button onclick="FastFunction()">Fast</button>
+    <button onclick="FaastFunction()">ZOOOOOM</button>
+
     <div id="myDiv" style="width:600px;height:600px;"></div>
+
 
 </body>
 </html>
@@ -26,6 +35,20 @@ var x = [], y = [];
 var inside = 0, total = 0;
 var i = 0;
 var dt = 0.015;
+var delay = 1000;
+
+function SloowFunction() {
+	delay = 1000;
+}
+function SlowFunction() {
+	delay = 400;
+}
+function FastFunction() {
+	delay = 100;
+}
+function FaastFunction() {
+	delay = 1;
+}
 
 
 Plotly.newPlot('myDiv', [{
@@ -67,7 +90,7 @@ function compute () {
 }
 
 async function update () {
-  await sleep(1000);
+  await sleep(delay);
   compute();
 
   Plotly.animate('myDiv', {
