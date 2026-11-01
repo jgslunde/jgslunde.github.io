@@ -10,7 +10,8 @@ import urllib.request
 from pathlib import Path
 
 QUERY = ('=author:"Lunde, J. G. S." OR =author:"Lunde, Jonas G. S." '
-         'OR =author:"Gahr Sturtzel Lunde, Jonas" OR =author:"Lunde, Jonas Gahr Sturtzel"')
+         'OR =author:"Gahr Sturtzel Lunde, Jonas" OR =author:"Lunde, Jonas Gahr Sturtzel" '
+         'OR =author:"Sturtzel Lunde, Jonas Gahr"')
 FIELDS = "bibcode,title,author,year,bibstem,volume,page,doi,identifier,doctype"
 # Leaves out conference abstracts, talks, proposals, errata and the like.
 DOCTYPES = {"article", "eprint", "inproceedings", "phdthesis", "mastersthesis"}
@@ -33,8 +34,11 @@ def clean_title(title):
     title = html.unescape(title)
     title = re.sub(r"<[^>]+>", "", title)
     title = re.sub(r"\\[a-zA-Z]+\{([^}]*)\}", r"\1", title)
-    title = title.replace(r"\sim", "~").replace("$", "")
-    return " ".join(title.split())
+    title = title.replace(r"\sim", "~").replace("$", "").replace("\u2500", "\u2013")
+    title = title.replace("BEYONDPLANCK", "BeyondPlanck").replace("COSMOGLOBE", "Cosmoglobe")
+    title = " ".join(title.split())
+    # ADS drops the tilde from "z ~ 3" in some titles.
+    return re.sub(r"\bz (\d)", r"z ~ \1", title)
 
 
 def arxiv_id(doc):
