@@ -1,0 +1,27 @@
+name: Update publications
+
+on:
+  schedule:
+    - cron: "17 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch papers from ADS
+        env:
+          ADS_API_TOKEN: ${{ secrets.ADS_API_TOKEN }}
+        run: python3 scripts/update_publications.py
+      - name: Commit if the list changed
+        run: |
+          git diff --quiet publications.js && exit 0
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add publications.js
+          git commit -m "Update publications from ADS"
+          git push
