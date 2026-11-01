@@ -1,1 +1,114 @@
 <!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jonas G. S. Lunde</title>
+<meta name="description" content="Jonas G. S. Lunde, postdoctoral researcher in astrophysics at the University of Oslo.">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#fbfbf9; --ink:#20231f; --soft:#6a6f67; --line:#dfe0da; --accent:#1f5c4a; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg:#161917; --ink:#e4e6e0; --soft:#979c93; --line:#30352f; --accent:#7cc3a9; }
+  }
+  * { box-sizing:border-box; }
+  html { scrollbar-gutter:stable; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:400 16px/1.55 "Libre Franklin", system-ui, sans-serif; }
+  a { color:inherit; text-decoration-color:var(--line); text-underline-offset:3px; }
+  a:hover { color:var(--accent); text-decoration-color:currentColor; }
+  .page { display:grid; grid-template-columns:17rem minmax(0,1fr); max-width:60rem; min-height:100vh; margin:0 auto; padding:0 1.5rem; }
+  aside { position:sticky; top:0; align-self:start; padding:5rem 2rem 2rem 0; }
+  h1 { font-size:1.35rem; font-weight:600; line-height:1.25; margin:0 0 1.6rem; letter-spacing:-.01em; }
+  nav a { display:block; margin-bottom:.15rem; text-decoration:none; color:var(--soft); }
+  nav a:hover { color:var(--accent); }
+  nav a { position:relative; }
+  nav a[aria-current] { color:var(--ink); }
+  nav a[aria-current]::before { content:""; position:absolute; left:-.75rem; top:.2em; bottom:.2em; width:2px; background:var(--accent); }
+  h2 { font-size:.85rem; font-weight:600; color:var(--soft); margin:2.2rem 0 .4rem; }
+  .ext a { display:block; margin-bottom:.15rem; }
+  main { border-left:1px solid var(--line); padding:5rem 0 3rem 3.5rem; }
+  section[hidden] { display:none; }
+  section > h2:first-child { margin-top:0; }
+  .bio { font-size:1.15rem; line-height:1.5; margin:0; max-width:34rem; }
+  .project { margin-bottom:1.3rem; }
+  .project > a { font-weight:500; }
+  .project p { margin:0; color:var(--soft); }
+  #papers h2 { margin:2rem 0 .7rem; }
+  #papers h2:first-child { margin-top:0; }
+  .paper { margin:0 0 .85rem; line-height:1.4; }
+  .paper small { display:block; color:var(--soft); font-size:.84rem; margin-top:.1rem; }
+  @media (max-width:720px) {
+    .page { display:block; padding:0 1rem; }
+    aside { position:static; padding:2.5rem 0 1.4rem; }
+    h1 { margin-bottom:.8rem; }
+    nav, .ext { display:flex; flex-wrap:wrap; column-gap:1.2rem; }
+    h2 { margin-top:1.2rem; }
+    .ext h2 { width:100%; }
+    main { border-left:0; border-top:1px solid var(--line); padding:1.6rem 0 3rem; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <aside>
+    <h1>Jonas G. S. Lunde</h1>
+    <nav>
+      <a href="#about">About me</a>
+      <a href="#projects">Projects</a>
+      <a href="#publications">Publications</a>
+    </nav>
+    <div class="ext">
+      <h2>External links</h2>
+      <a href="https://github.com/jgslunde" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://orcid.org/0000-0002-7091-8779" target="_blank" rel="noopener">ORCID</a>
+      <a href="https://www.linkedin.com/" target="_blank" rel="noopener">LinkedIn</a>
+      <a href="https://scholar.google.com/" target="_blank" rel="noopener">Google Scholar</a>
+      <a href="https://ui.adsabs.harvard.edu/search/q=%3Dauthor%3A%22Lunde%2C%20J.%20G.%20S.%22%20OR%20%3Dauthor%3A%22Lunde%2C%20Jonas%20G.%20S.%22%20OR%20%3Dauthor%3A%22Gahr%20Sturtzel%20Lunde%2C%20Jonas%22%20OR%20%3Dauthor%3A%22Lunde%2C%20Jonas%20Gahr%20Sturtzel%22&amp;sort=date%20desc" target="_blank" rel="noopener">NASA ADS</a>
+      <a href="https://arxiv.org/" target="_blank" rel="noopener">arXiv</a>
+      <a href="https://www.mn.uio.no/astro/english/" target="_blank" rel="noopener">University of Oslo</a>
+    </div>
+  </aside>
+  <main>
+    <section data-view="about">
+      <p class="bio">Postdoctoral researcher in astrophysics at the Institute for Theoretical Astrophysics, University of Oslo. I work on line intensity mapping with the COMAP project, and global Bayesian CMB analysis with the Cosmoglobe collaboration.</p>
+    </section>
+    <section data-view="projects">
+      <div class="project"><a href="https://jgslunde.github.io/HnefataflOnlineGame/">Tafl board games</a>
+        <p>Tafl in the browser, against engines trained with reinforcement learning + MCTS. <a href="https://github.com/jgslunde/HnefataflOnlineGame">Source</a>, <a href="https://github.com/jgslunde/Tafl_RL">training code</a>.</p></div>
+      <div class="project"><a href="docs/misc/pi.html">Humble Pi</a>
+        <p>Estimating &pi; by placing random points in a circle.</p></div>
+      <div class="project"><a href="https://github.com/jgslunde/PythonPhysicsExercises">Physics exercises</a>
+        <p>Written for the introductory Python course IN1900 at UiO.</p></div>
+    </section>
+    <section data-view="publications">
+      <div id="papers"></div>
+    </section>
+  </main>
+</div>
+<script src="publications.js"></script>
+<script>
+  const papers = document.getElementById("papers");
+  [...new Set(PUBLICATIONS.map(p => p.y))].forEach(y => {
+    const h = document.createElement("h2");
+    h.textContent = y; papers.append(h);
+    PUBLICATIONS.filter(p => p.y === y).forEach(p => {
+      const row = document.createElement("p"), a = document.createElement("a"), s = document.createElement("small");
+      row.className = "paper"; a.href = p.u; a.textContent = p.t;
+      s.textContent = `${p.a}, ${p.v}`;
+      row.append(a, s); papers.append(row);
+    });
+  });
+
+  function route() {
+    const sections = [...document.querySelectorAll("main section")];
+    const current = sections.find(s => "#" + s.dataset.view === location.hash) || sections[0];
+    sections.forEach(s => s.hidden = s !== current);
+    document.querySelectorAll("nav a").forEach(a =>
+      a.getAttribute("href") === "#" + current.dataset.view ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current"));
+    scrollTo(0, 0);
+  }
+  addEventListener("hashchange", route); route();
+</script>
+</body>
+</html>
