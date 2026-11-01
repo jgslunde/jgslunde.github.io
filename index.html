@@ -17,7 +17,7 @@
   body { margin:0; background:var(--bg); color:var(--ink); font:400 16px/1.55 "Libre Franklin", system-ui, sans-serif; }
   a { color:inherit; text-decoration-color:var(--line); text-underline-offset:3px; }
   a:hover { color:var(--accent); text-decoration-color:currentColor; }
-  .page { display:grid; grid-template-columns:17rem minmax(0,1fr); max-width:60rem; min-height:100vh; margin:0 auto; padding:0 1.5rem; }
+  .page { display:grid; grid-template-columns:17rem minmax(0,1fr); max-width:60rem; min-height:100vh; margin:0 auto; padding:0 1.5rem; background:var(--bg); box-shadow:0 0 2.5rem 1.5rem var(--bg); }
   aside { position:sticky; top:0; align-self:start; padding:5rem 2rem 2rem 0; }
   h1 { font-size:1.35rem; font-weight:600; line-height:1.25; margin:0 0 1.6rem; letter-spacing:-.01em; }
   nav a { display:block; margin-bottom:.15rem; text-decoration:none; color:var(--soft); }
@@ -47,6 +47,9 @@
     .ext h2 { width:100%; }
     main { border-left:0; border-top:1px solid var(--line); padding:1.6rem 0 3rem; }
   }
+  .life { position:fixed; top:0; z-index:-1; pointer-events:none; }
+  .life[hidden] { display:none; }
+  .life canvas { display:block; }
 </style>
 </head>
 <body>
@@ -110,5 +113,6 @@
   }
   addEventListener("hashchange", route); route();
 </script>
+<script src="life.js"></script>
 </body>
 </html>
