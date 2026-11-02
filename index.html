@@ -7,50 +7,7 @@
 <meta name="description" content="Jonas G. S. Lunde, postdoctoral researcher in astrophysics at the University of Oslo.">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600&display=swap" rel="stylesheet">
-<style>
-  :root { --bg:#fbfbf9; --ink:#20231f; --soft:#6a6f67; --line:#dfe0da; --accent:#1f5c4a; }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) { --bg:#161917; --ink:#e4e6e0; --soft:#979c93; --line:#30352f; --accent:#7cc3a9; }
-  }
-  * { box-sizing:border-box; }
-  html { scrollbar-gutter:stable; }
-  body { margin:0; background:var(--bg); color:var(--ink); font:400 16px/1.55 "Libre Franklin", system-ui, sans-serif; }
-  a { color:inherit; text-decoration-color:var(--line); text-underline-offset:3px; }
-  a:hover { color:var(--accent); text-decoration-color:currentColor; }
-  .page { display:grid; grid-template-columns:17rem minmax(0,1fr); max-width:60rem; min-height:100vh; margin:0 auto; padding:0 1.5rem; background:var(--bg); box-shadow:0 0 2.5rem 1.5rem var(--bg); }
-  aside { position:sticky; top:0; align-self:start; padding:5rem 2rem 2rem 0; }
-  h1 { font-size:1.35rem; font-weight:600; line-height:1.25; margin:0 0 1.6rem; letter-spacing:-.01em; }
-  nav a { display:block; margin-bottom:.15rem; text-decoration:none; color:var(--soft); }
-  nav a:hover { color:var(--accent); }
-  nav a { position:relative; }
-  nav a[aria-current] { color:var(--ink); }
-  nav a[aria-current]::before { content:""; position:absolute; left:-.75rem; top:.2em; bottom:.2em; width:2px; background:var(--accent); }
-  h2 { font-size:.85rem; font-weight:600; color:var(--soft); margin:2.2rem 0 .4rem; }
-  .ext a { display:block; margin-bottom:.15rem; }
-  main { border-left:1px solid var(--line); padding:5rem 0 3rem 3.5rem; }
-  section[hidden] { display:none; }
-  section > h2:first-child { margin-top:0; }
-  .bio { font-size:1.15rem; line-height:1.5; margin:0; max-width:34rem; }
-  .project { margin-bottom:1.3rem; }
-  .project > a { font-weight:500; }
-  .project p { margin:0; color:var(--soft); }
-  #papers h2 { margin:2rem 0 .7rem; }
-  #papers h2:first-child { margin-top:0; }
-  .paper { margin:0 0 .85rem; line-height:1.4; }
-  .paper small { display:block; color:var(--soft); font-size:.84rem; margin-top:.1rem; }
-  @media (max-width:720px) {
-    .page { display:block; padding:0 1rem; }
-    aside { position:static; padding:2.5rem 0 1.4rem; }
-    h1 { margin-bottom:.8rem; }
-    nav, .ext { display:flex; flex-wrap:wrap; column-gap:1.2rem; }
-    h2 { margin-top:1.2rem; }
-    .ext h2 { width:100%; }
-    main { border-left:0; border-top:1px solid var(--line); padding:1.6rem 0 3rem; }
-  }
-  .life { position:fixed; top:0; z-index:-1; pointer-events:none; }
-  .life[hidden] { display:none; }
-  .life canvas { display:block; }
-</style>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div class="page">
@@ -59,6 +16,7 @@
     <nav>
       <a href="#about">About me</a>
       <a href="#projects">Projects</a>
+      <a href="#notes">Notes</a>
       <a href="#publications">Publications</a>
     </nav>
     <div class="ext">
@@ -83,6 +41,12 @@
         <p>Estimating &pi; by placing random points in a circle.</p></div>
       <div class="project"><a href="https://github.com/jgslunde/PythonPhysicsExercises">Physics exercises</a>
         <p>Written for the introductory Python course IN1900 at UiO.</p></div>
+    </section>
+    <section data-view="notes">
+      <!-- Newest first. Add one of these for each note:
+      <p class="note-item"><a href="notes/my-note.html">Note title</a><small>1 November 2026</small></p>
+      -->
+      <p class="note-item"><a href="notes/MCTS_RL_engine_part_1.html">An introduction to MCTS and RL in game engines</a><small>2 November 2026</small></p>
     </section>
     <section data-view="publications">
       <div id="papers"></div>

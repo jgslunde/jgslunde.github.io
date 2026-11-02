@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title> An introduction to board game engines: Monte Carlo Tree Searches and Reinforcement Learning &ndash; Jonas G. S. Lunde</title>
+<meta name="description" content="How AlphaZero-style board game engines work: Monte Carlo Tree Search guided by a neural network, trained through self-play reinforcement learning.">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+
+</head>
+<body>
+<div class="page note">
+  <header>
+    <a class="home" href="../#notes">Jonas G. S. Lunde</a>
+    <h1>An introduction to MCTS and RL in game engines</h1>
+    <time datetime="2026-11-01">2 November 2026</time>
+  </header>
+  <article>
+    <p><a href="MCTS_RL_engine_part_2.html">Part 2 of these notes can be found here</a>.</p>
+    <h2>Covered concepts</h2>
+    <table>
+      <tr><th>Concept</th>  <th>Explanation</th></tr>
+
+      <tr>
+        <td><a href="#MCTS">Monte Carlo Tree Search (MCTS)</a></td>
+        <td>An algorithm for guided exploration of a game tree, looking for optimal actions.</td>
+      </tr>
+
+      <tr>
+        <td>MCTS simulations</td>
+        <td>A single guided path-selection through the game tree, stopped after an unexplored move is reached.</td>
+      </tr>
+
+      <tr>
+        <td>Reinforcement Learning (RL)</td>
+        <td>A flexible machine learning method for training an agent in a defined environment on specific rewards (like winning games).</td>
+      </tr>
+
+      <tr>
+        <td>Board encoding</td>
+        <td>Design decision on how to represent the game board, usually through one-hot encoding.</td>
+      </tr>
+
+      <tr>
+        <td>Move temperature ($\tau$)</td>
+        <td>Decides how likely non-top moves are to be played. $\tau=0$ deterministically plays the top recommended move.</td>
+      </tr>
+
+
+    </table>
+    <h2>1. Intro</h2>
+    <p>
+    These notes will explain how to build a Monte Carlo Tree Search (MCTS) game engine, and train it with Reinforcement Learning (RL). This reflects how chess engines like AlphaZero and Leela Chess Zero are trained.
+    </p>
+    <p>
+    These notes are meant partially as a pedagogical intro, and partially as a reference manual for all the various concepts and optimizations you might want to try if you are building an MCTS engine.
+    </p>
+    <p>
+    Because chess is such a thoroughly explored game, I will use another example: A little known game called <em>Brandubh</em>. If you are uninterested in this, simply skip ahead to <a href="#NN">Neural Networks</a>, it should be possible to follow the text without understanding Brandubh.
+    </p>
+
+    <h3>"Zero" engines</h3>
+    <p>
+      The setup I describe will produce a "zero" engine, like AlphaZero and Leela Chess. Zero refers to the fact that these engines are trained entirely on self-play, having "zero" direct human intervention. They are not trained on any human games, and there is no hard-coded "advice" or tactics from human experts embedded in the algorithm. There is always some debate about exactly where the zero-line is drawn, and what constitutes human intervention.
+    </p>
+
+    <p>
+      The "zero" concept strongly distinguishes the MCTS RL engines from the more traditional Minimax alpha/beta pruning engines, like Stockfish. These rely on highly tuned and hand-crafted rules for quickly selecting between good and bad moves, called <span class="info" tabindex="0">"heuristics"<span>Stockfish now uses a neural network for its evaluation instead of human-made heuristics, but still involve a lot of human "non-zero" involvement in how its pruning and search works, value of pieces etc. Ironically, its neural network is largely trained on Leela Chess data.</span></span>.
+    </p>
+
+    <p>
+      The zero-concept is, in my opinion, much more appealing than hand-crafted heuristics, because the engine learns to play completely on its own. There's a much larger chance it plays less like a human, and when it does play like a human it is because it discovered the same rules on its own, testing them against itself!
+    </p>
+
+    <h3 id="Brandubh">The rules of Brandubh</h3>
+      <p>
+        A few different variations of the game exist. For a complete reference of the Brandubh 2.0 ruleset, see <a href="https://aagenielsen.dk/brandubh2_rules_en.pdf" target="_blank">this leaflet</a>.
+        <br>
+      </p>
+      <strong>A summary of Brandubh 2.0 rules:</strong>
+      <ul>
+        <li>Brandubh is played on a 7x7 board, with 8 attacking pieces (black) and 5 defending pieces (white), including the king, located at the center of the board.</li>
+        <li>All pieces move like rooks in Chess, vertically or horizontally as far as they want, but not onto or through other pieces.</li>
+        <li>A piece is captured by being caught, horizontally or vertically, between two hostile squares, during the turn of the opponent. Hostile squares are squares with opponent pieces, the four corners, and the central "throne" square (when un-occupied).</li>
+        <li>The central square, the throne, is <em>not</em> hostile to the king (cannot be used in capture of the king), and only the king can move into it, although other pieces can move across it.</li>
+        <li>The attackers win by capturing the king.</li>
+        <li>The defenders win by escaping the king to one of the four corner squares. Other pieces cannot occupy the corner squares.</li>
+        <li>When the king is on the throne, he can only be captured by 4 surrounding pieces.</li>
+        <li>The king otherwise moves, captures, and is captured like other pieces.</li>
+        <li>Attackers (black) move first.</li>
+      </ul>
+    <div class="images">
+      <figure>
+        <img src="images/Brandubh_board.png" alt="A Brandubh board." width="100%">
+        <figcaption>Brandubh starting position: 8 attackers (black) against 5 defenders (white). The board has 8-fold symmetry, giving only 5 unique opening moves from black.</figcaption>
+      </figure>
+      <figure>
+        <img src="images/Brandubh_capture.png" alt="A Brandubh board." width="100%">
+        <figcaption>Black to move, with two possible captures. Moving up captures against the corner of the board, while moving right captures against the other black piece.</figcaption>
+      </figure>
+    </div>
+
+    <hr>
+    <h2 id="NN">2. The neural network engine</h2>
+    <h3>The policy and value heads</h3>
+    <p>
+    At the center of the engine is a neural network which takes the current board state ($s$) as input and has (at least) two outputs, referred to as "heads":
+    </p>
+    <ul>
+      <li>The policy head (the "actor"), $P(s,a)$: A prediction of how good each move ($a$) is at the current board state. Its job is to recommend what moves are worth looking into.</li>
+      <li>The value head (the "critic"), $V(s)$: A prediction, between $-1$ and $+1$, of which player is currently in the lead.</li>
+    </ul>
+    <p>
+    An interesting insight is that the jobs of the value and policy heads are actually not that dissimilar: You could ask the value head what it thinks of the current board compared to the board after each of your legal moves. If the network is well trained, this should agree quite well with the moves recommended by the policy head. You could therefore ask yourself why not just have only a value head. One reason is that this would require running the NN on tens of different board states (i.e. 40 legal moves in the starting position of Brandubh), while the policy head gives you an indication from only a single forward pass. We will also see later that the policy and value heads do well in combination.
+    </p>
+
+    <h3>Input and output encodings</h3>
+    <p>
+      A key part in neural network design is choosing a sensible <em>encoding</em>, which means how to represent its input and output.
+    </p>
+    <p>
+      <strong>Input encoding</strong><br>
+      The input encoding is relatively straightforward: Use one one-hot encoded board (see below) for each piece type. In Brandubh that's only three layers; (i) attacker soldiers (ii) defender soldiers (iii) defender king. You also need some input telling you which turn it is, and any other rule that cannot be directly inferred from looking at the board, like how many repetitions have happened.
+    </p>
+    <p>
+      <strong>Output encoding</strong><br>
+      Output encodings have more genuine design choices, with the optimal choice being less obvious, and depending on the properties of the game. The first half is relatively straightforward: Picking what pieces to move. Virtually every output encoding does this by one-hot encoding the entire board (for us $7\times 7$).
+    </p>
+    <p>
+      How to encode where to move the piece is trickier: You <em>can</em> also one-hot encode the entire "move to" board as another $7\times 7$ plane. However, you cannot simply stack these two vectors together into one $7\times 7 + 7\times 7 = 98$ element output, because the network cannot communicate <em>which</em> piece <span class="info" tabindex="0">is supposed to move where<span>If its "move from" vector says A4=0.29, B3=0.25, and D5=0.23, and its "move to" vector says B4=0.51, A3=0.21, you just know that it really wants to move some piece to B4, but no idea which piece.</span></span>. You must instead encode the explicit <em>combined</em> move-from-to output of size $7\times 7\times 7\times 7$, allowing the network to say "I want to move that piece there", solving the problem. 
+    </p>
+
+    <p>
+      This probably works fine, but the output is quite large, at 2401 elements. There are two ways we could prune this size without losing gameplay-performance:
+    </p>
+    <ol>
+      <li>Most of the "to" moves are <em>always</em> illegal. In Brandubh, all pieces move like rooks, so from e.g. B3 only the other X3 and BX squares can be reached. Simply pruning all impossible "to"-squares for each "from" square reduces the encoding to 588 elements.</li>
+      <li>We can encode relative movement instead of squares: Each piece can, at most, move 6 tiles in any of the 4 cardinal directions. Instead of encoding the end-square of the piece, we can encode "move X steps in direction Y". That gives a "to-from" encoding of size $7\times 7\times 6 \times 4 = 1176$ elements. </li>
+    </ol>
+    <p>
+      The decision between the two should probably be made from what sort of network is employed: If we employ a convolutional neural network (CNN), we should do option 2: CNNs are inherently relational, preferring relative statements such as "move 4 up" as opposed to "move to this square".
+      If we instead use a network architecture like a transformer, option 1 is likely better, as these see the board in "absolute" instead of relative terms.
+      <span class="info" tabindex="0">ⓘ<span>For a game like Brandubh the relative encoding and CNNs are plausibly superior. Chess is less certain because it has so many different pieces that move in different ways. AlphaZero used relative encodings (option 2) and CNNs. Leela Chess now uses transformers instead of CNNs, and uses option 1 for its encoding.</span></span>
+    </p>
+
+    <p>
+      Note that, as is common with output encodings, many (if not most) of the possible move encodings are illegal, and these are simply ignored even if the network gives them non-zero values, and the legal moves are re-normalized to 1.
+    </p>
+
+    <div class="remark">
+    <strong>Why one-hot encoding is good</strong>
+    <p>
+      When you are encoding something like chess pieces you could represent the pieces of each player as an 8x8 grid of integers [0,6], 0=empty, 1=pawn, 2=bishop, etc. This is a natural but horrible idea, and it's easy to understand why: Say the network has some nodes/weights/logic dedicated to knight moves, and understanding forks. This logic must activate when seeing a value 3, but <em>not</em> activate when seeing 0, 1, 2, 4, 5, and 6. You are asking the network to create highly non-linear responses just to decode the board pieces. The solution is <em>one-hot encoding</em>, where every piece type gets their own board, consisting only of 0s and 1s. The input will be 6x as large, but the network can now much more easily read off pieces and the logic of the board. In general, whenever you can take a concept that the network would have to figure out itself and instead make it an input, it's often worth it.
+    </p>
+    </div>
+
+    <h3>Neural Network architecture</h3>
+    <p>
+      <strong>Convolutional Neural Networks</strong><br>
+      Convolutional Neural Networks (CNNs) use network layers with special <em>convolutional</em> kernels. This works well for anything with a relational 2D (or higher) structure, such as images, or board games. The $N\times N$ convolutional kernels can learn to capture specific board features, like "close to edge" or "threatens a piece". The unique thing about these CNN kernels is that the same kernel is convolved across the entire board, such that a concept like "threatening a piece on my left" can be more easily abstracted away, and does not have to be learned independently for every square on the board.
+    </p>
+    <p>
+      CNNs are likely a good choice for a game like Brandubh, and kernels of size $3\times 3$ are probably more than enough, as they can convey information across the board in only a few layers of depth. Since all the pieces move as rooks, one could also experiment with some sort of $1\times N$ and $N \times 1$ kernels, to create better vision across an entire lane.
+    </p>
+
+    <p>
+      <strong>Transformers</strong><br>
+      Transformers, the architecture in modern LLMs, use a mechanism called <em>attention</em>. This mechanism is not too dissimilar to the convolutional kernels, in that they convey relational information between different squares, but attention has two potential advantages for our purposes:
+    </p>
+    <ol>
+      <li>The attention mechanism can look anywhere on the board, which would require a very costly large kernel for CNNs.</li>
+      <li>The attention mechanism works on a more abstract <em>content-dependent</em> space than CNN kernels. For example, it can have an attention head dedicated to conveying the position of the king.</li>
+    </ol>
+    <p>
+      The attention mechanism is excellent at far-reaching and complicated patterns, like forks, castling rules, etc. For such a small board and simple rules as Brandubh, we likely won't see the full potential of this type of architecture, and it's plausible that a CNN can capture the relevant tactics for cheaper.
+    </p>
+
+
+    <hr>
+    <h2 id="MCTS">3. Monte Carlo Tree Search</h2>
+    <p>
+      <span class="info" tabindex="0">Monte Carlo Tree Search (MCTS)<span>The original versions of MCTS, as the name suggests, estimated each new position by playing random games to the end. Modern engines replace this with the value head, which makes the search deterministic. This is the version I will explore.</span></span>
+      is a way of parsing a game tree to gradually gain more information about which move is best. Combining the MCTS with the policy and value head outputs is the centerpiece of the entire game engine. Note that everything described in this section, including the hundreds of simulations performed, is done in the context of choosing only the <em>single</em> next move of the game.
+    </p>
+    <p>
+      The MCTS performs a series of <em>simulations</em>, say, 800. A single simulation starts at the current board state (the root node), and deterministically performs moves (parsing the game tree) until it reaches a node that has not yet been explored. At the first simulation, every node is unexplored, so the simulation involves only a single move. However, simulation number 100 might first make 20 moves that have already been explored, before reaching an unseen move (node). Note that:
+    </p>
+    <ul>
+      <li>The network only needs to be evaluated when we encounter a node we haven't explored yet, so parsing already explored moves is cheap.</li>
+      <li>Since every simulation ends in one new move, after all 800 simulations we have explored exactly 800 nodes on the game tree.</li>
+    </ul>
+
+    <p>
+      800 is a quite typical number for simulation counts for these types of engines during training. In a brute-force sense, that is very few: In Brandubh it is not even enough to fully explore all the legal first 2 moves of the game (there are 960 such sequences). The simulation therefore only works when the policy and value heads provide highly helpful guidance. In Minimax engines like Stockfish much cheaper evaluations are used, giving as much as millions of simulated positions, but of much lower quality.
+    </p>
+
+    <div class="remark">
+      <p>
+        Each node is one board state, and each of its child nodes is a legal move (by the current player) from that board state. Note that the same board state can often be reached through multiple paths (i.e. lines of moves), but these will stay as separate entries in the node network.
+      </p>
+    </div>
+
+    <figure>
+      <img src="images/mcts-simulations-4-5.svg" alt="MCTS simulation illustration.">
+      <figcaption>Illustration of MCTS simulation nr 3 and 4. The top node is the current position (root node), and the 3 child nodes are the 3 legal moves. Each simulation parses the tree using some selection mechanism, until it reaches an unexplored node (move). It then evaluates that node with the neural network. Note that every other horizontal layer is an <em>opponent</em> move.</figcaption>
+    </figure>
+
+    <h3>Node selection</h3>
+    <p>
+      From the position of some parent node, how does the MCTS choose what move to explore next (what path down the node tree to take)? From a position $s$, it chooses the move $a$ that has the maximum sum $Q(s,a) + U(s,a)$. These two values can change dramatically as the search progresses, making the MCTS re-prioritize: The two values decide the moves, which again informs the values. This repeats for any desired number of simulations.
+    </p>
+    <p>
+      The <em>mean action value</em> $Q(s,a)$ represents the <em>exploitation</em> weight of the choice. It is simply the mean of the value head output for all explored positions "downstream" of that move:
+      <span class="info" tabindex="0">ⓘ<span>In practice this is done by each node keeping track of how many times they have been visited, $N(s)$, and what the sum of values below them are, $W(s)$. When a simulation is done, it does a <em>backup</em>, where it traverses the nodes backwards, flipping the sign of the value at every step (since the players alternate), updating $W(s)$ and $N(s)$ so that its $Q=W/N$ value is easily accessible.</span></span>
+      $$\sum_{i=1}^N V(s_i)/N.$$
+      It tells us how "well it went" the other times simulations went down this path. $Q(s,a)$ is always seen from the perspective of the player making the move at $s$: If every simulation down this path ended in a win for that player, $Q(s,a)=1$ for that move. Since the players take turns, a value that is good for one is equally bad for the other, so the opponent's nodes count the same values with the opposite sign.
+      An unvisited node would get $Q=0/0$, and a common convention is to simply copy its parent's $Q$-value, saying that all child nodes are probably equally good as the parent node until we have checked.
+    </p>
+
+    <h3>The upper confidence bound</h3>
+    <p>
+      The <em>upper confidence bound</em> $U(s,a)$ is the <em>exploration</em> weight, i.e. how we judge positions we have not explored a lot yet. Different algorithms exist, and I will use the very common PUCT (Predictor + Upper Confidence bound applied to Trees) formula
+      $$U(s,a) = c_\mathrm{puct} \cdot P(s,a) \cdot \frac{\sqrt{N(s)}}{1 + N(s,a)}.$$
+    </p>
+    <ul>
+      <li>$P(s,a)$ is the policy output, i.e. how much the policy network likes this move as opposed to the other possible moves.</li>
+      <li>$N(s,a)$ is the number of previous visits to node (move) $a$.</li>
+      <li>$N(s)$ is the total number of visits to the parent node, such that we have $N(s) = \sum_i N(s,a_i)$.</li>
+      <li>$c_\mathrm{puct}$ is just some constant for the exploration vs exploitation tradeoff, typically in the range 1 - 4.</li>
+    </ul>
+    <p>
+      It can be easier to understand this formula by approximating $1 + N(s,a) \approx N(s,a)$ and introducing $f(s,a) = N(s,a)/N(s)$ as the fraction of previous visits given to a move $a$. We then get
+      $$U(s,a) = P(s,a) \cdot \frac{c_\mathrm{puct}}{\sqrt{N(s)}} \cdot \frac{1}{f(s,a)}.$$
+      The first term is just the policy head recommendation.<br>
+      The second term now reads "exploration as a whole should be down-weighted, in favor of exploitation, once we have more information". Since this applies to every move, it only affects exploitation vs exploration as a whole.<br>
+      The third term says something similar, but per move suggestion: "Down-weight moves that have already been explored many times". This can favor moves that are under-explored, even if they are currently judged as slightly worse, and the effect is quite strong: Twice as many visits exactly cancels a doubling in the policy-priority.
+    </p>
+
+
+    <h3>MCTS simulation summary</h3>
+    <p>
+      In summary, each MCTS simulation works as follows:
+    </p>
+    <ol>
+      <li>At each node (position), go down the path with the highest $Q+U$ score. In the beginning, the policy-guided exploration score ($U$) will dominate. As we get more visits and information from deeper nodes, the value-guided exploitation score ($Q$) becomes more important.</li>
+      <li>When a node/position that has not yet been explored is chosen, evaluate the neural network on this position, and store its policy and value output.</li>
+      <li><em>Backup</em> the tree, traversing it in reverse order, to update the value-average at each node.</li>
+      <li>When we reach the top (root) node, the $Q$ and $U$ values of the path we went down will change, and step 1 is repeated, possibly selecting a different path to go down.</li>
+    </ol>
+    <p>
+      The figure below shows an illustration of this process.
+    </p>
+    <figure>
+      <img src="images/mcts-simulation-4-backup.svg" alt="MCTS simulation with back up step.">
+      <figcaption>Illustration of MCTS simulation nr 3 (left) with the backup step (right). Visit-count ($N$) values are shown as numbers on the nodes themselves, and $Q$ and $U$ values next to them. The simulation ended up at a node that was a clean loss, hard-coding the value of that node to -1. This new information is then backed up through the parent nodes. The discouraging result from the left path means that the middle path now has the highest $Q+U$ value, and will be the node chosen by simulation 4.</figcaption>
+    </figure>
+
+    <p>
+      Note that $U(s,a)$ is set up such that if all moves have identical $Q$, the visit fractions converge to precisely the policy, $f(s,a) \rightarrow P(s,a)$. The search therefore only departs from the policy where $Q$ disagrees with it. Since $U$ shrinks as $N(s)$ grows, these disagreements win out in the end. This is why training the policy on visit counts works: Where the search learned nothing new, the target equals the current policy and nothing changes, and where it found something better, the policy is pulled towards it.
+    </p>
+
+    <!-- <div class="remark">
+    <strong>Comparison to Minimax and alpha/beta pruning</strong>
+    <p>Engines like Stockfish use a different type of search called a Minimax. The key difference is that Minimax is <em>exhaustive</em>, meaning that the purpose of the search is to prove that for move A there exists no response from the opponent (to some depth) that would leave us worse off than if we made move B. Something I like about MCTS is that it feels "rounder" and more probabilistic: It averages all the values it sees down a given line. Minimax also needs to finish an entire new depth of search before it can use it, insisting on proving that no counter-move can spoil it, and must simply discard half-finished depths. MCTS can be stopped at any simulation count. Note that Minimax is not a direct alternative to MCTS in our setup, it is used together with a different selection algorithm, called alpha/beta pruning.</p>
+    </div>     -->
+
+    <h3>Making a move</h3>
+    <p>
+      After all simulations (say, 800) of the MCTS are finished, we are left with a $Q(s,a)$-score and a visit count $N(s,a)$ for each of the legal moves. We will actually ignore the $Q$-score when making a move, and make the move based solely on visit count $N$. The rationale for this is twofold:
+    </p>
+    <ol>
+      <li>The visit count is guided by the score during the MCTS, so the score-information from $Q$ is already in $N$.</li>
+      <li>The visit count is considered more reliable, as it also relates to how thoroughly we have tested the relevant move in depth. A move with a high $Q$-score but a low visit count might look great, but in reality be a trap that we didn't catch, because we didn't probe it deep enough.</li>
+    </ol>
+    <p>
+      If we just want maximum playing strength, we simply pick the move with the highest visit count. However, since the entire MCTS is <em>completely deterministic</em> for a given policy and value network ($P(s,a)$ and $V(s)$), this would result in the same game every time, if two MCTS agents are playing each other. The primary counter to this problem is <em>temperature</em>.
+    </p>
+
+
+    <h3> Temperature </h3>
+    <p>
+      During self-play training, we therefore introduce a <strong>temperature</strong> $\tau$. Instead of always choosing the highest visit count move, we draw a move with relative probability $\mathcal P(a) = N(s,a)^{1/\tau}$. Temperatures between 0 and 1 are common, and each make sense in their own regard: If the temperature is $\tau \rightarrow 0$, we are back to determinism. If $\tau = 1$, we are drawing a move with probabilities proportional to their visit counts. For a middle ground like $\tau = 0.5$, moves are prioritized with the square of their visit count, e.g. a move with 10 times lower visit count will have 100 times lower probability.
+    </p>
+
+    <figure>
+      <img src="images/mcts-final-move.svg" alt="Finished MCTS run results.">
+      <figcaption>Results of a finished MCTS, after 800 simulations, meaning 800 positions have been explored, and the tree extends far downward. The middle node has the most visits, and if $\tau=0$ it is guaranteed to be the selected move. If e.g. $\tau=1$, the left and right nodes have, respectively, a $31/800$ and $157/800$ chance of being selected.</figcaption>
+    </figure>
+
+    <div class="remark">
+      <strong>Picking the right temperature for training</strong>
+      <p>
+      Temperature will always be a tradeoff between two considerations:
+      </p>
+      <ul>
+        <li>Low temperature can create too little variety in games, especially since the network is playing against itself, and the training will overfit on a certain line of play.</li>
+        <li>High temperature can create too risky play, selecting frequent sub-optimal moves, and the network will not have as clean training data for its value head.</li>
+      </ul>
+      <p>
+        In AlphaZero and Leela Chess, the temperature typically starts at 1, giving more varied opening moves, and is decreased as the game goes on to 0 (or a low value), either as a step function or linearly decaying. High temperature during the opening and parts of the mid-game phases, where chess typically has a wide range of good moves, creates a diversity of self-play games. As we enter the second half of the game, we have already created a diverse set of games, and the temperature can be dialed back, to increase the game quality in the final and decisive moments.
+      </p>
+    </div>
+
+
+    <hr>
+    <h2>4. Training the network through reinforcement learning</h2>
+    <p>
+      The main training loop is a repeating 2-step process:
+    </p>
+    <ol>
+      <li>Generate games: The network plays many games against itself using MCTS, with $\tau \geq 0$. For <em>every move</em> of every game, two things are stored in addition to the board state itself: (i) The final MCTS visit count $N(s,a)$. (ii) The final outcome of the game which the move was part of, $z \in \{-1, 0, +1\}$.</li>
+      <li>Train on games: Using regular backpropagation, the network is trained on the moves.</li>
+    </ol>
+    <p>
+      These two steps are repeated over and over. As the network grows smarter, it produces higher quality games to train on, which again improves the network.
+    </p>
+
+    <p>
+      During step 2, the policy and value head are trained as follows:
+    </p>
+    <ol type="i">
+      <li>The value head, $V(s)$, is simply trained on the final outcome of the game. In other words, the value head attempts to predict "with the current network as player, what is the final outcome of this board state?"</li>
+      <li>The policy head, $P(s,a)$, is trained on the visit counts $N(s,a)$. As a reminder, the visit count is the final result of the MCTS simulations. In other words, the policy head is trained on attempting to predict the result of its own deep search.</li>
+    </ol>
+    <p>
+      Note the circular dependence between the two heads, and their training goals: The value head is assessing the win chance given the current network as a player, not under perfect play. As the policy head improves in quality, the move choices will improve, and the value head will sharpen towards perfect play. As the value head sharpens, the MCTS will pull the visit count towards better moves. The policy is then trained on these better moves.
+    </p>
+
+    <p>
+      Both the policy and value heads are trained using regular backpropagation, with some chosen optimizer, learning rate, batch size, etc. For the policy head, cross-entropy loss is commonly used. If the value is trained as a single value between -1 and +1, something like MSE is typically used. However, a popular improvement to this is using a value head with three outputs, predicting the win, loss, and draw-chance. The reason for this is primarily to be able to distinguish between "0" meaning "likely a drawn position" and "an undecided position". For the 3-element value head, cross-entropy can be used there too.
+    </p>
+
+
+    <div class="remark">
+      <strong>The value-policy bootstrap</strong>
+      <p>
+        The initial untrained network will simply recommend random moves, until one of its nodes hits the end of the game. The end of the game is hard-coded to +1/0/-1 regardless of what the value head says, so this information the policy can actually train on even before the value head understands a winning position. The value head will learn only from the actual game outcome. Even though the networks play randomly, the final positions before a win are likely better than average, so some actual information is learned. Even if the value head just learns what a completely won game looks like, this will start to propagate earlier into the game by the MCTS. As the network gets stronger, it starts seeing what mid-game positions more often end up in winning end-game positions, etc.
+      </p>
+    </div>
+
+    <h3>The replay buffer</h3>
+    <p>
+      A worry with the play-train loop described above is ending up in a rock-paper-scissors situation where the network learns to beat the narrow strategies employed by only the latest iteration of the network. We solve this by adding the generated positions into a large <em>replay buffer</em>, and drawing new positions randomly from this buffer. We then train on a random selection of positions from many iterations back. This can substantially increase training stability.
+    </p>
+
+    <p>
+      The number of positions drawn from the replay buffer is then in theory fully independent of the number of positions placed into it. The ratio of drawn positions to inserted positions for every training iteration is called the <em>replay ratio</em>, and is typically close to 1. The argument for a higher ratio is primarily if your game generation is very costly. A lower ratio lets the network see more diverse positions, and avoids overfitting.
+    </p>
+    <figure>
+      <img src="images/replay_buffer.svg" alt="Training loop, including replay buffer.">
+      <figcaption>Training loop, including replay buffer.</figcaption>
+    </figure>
+
+
+
+    <div class="remark">
+      <strong>Why both a policy and a value head</strong>
+      <p>
+        As I previously pointed out, the most important reason for having both a policy and value head is efficiency: The policy head serves as a cheaper predictor of what the value head would say about our legal moves, without having to run the network on all those moves. But there are some other arguments for splitting them as well.
+      </p>
+      <ol>
+        <li>The policy is intentionally "broader". The value head trains on the sharp +1/-1 state of the game. The policy head is designed to, and can afford to, dedicate some of its attention to paths that might be promising, but are highly uncertain.</li>
+        <li>The policy head can learn things the value head can't see: The value head is only trained on the final game outcome of the game that actually resolved. The policy head is trained on its various searches. It might discover that "this side-line we thought was OK actually appears terrible on deeper inspection". Next time the same position is encountered, the policy (partially) remembers this already from the root node. The value head would only learn this if the game actually went down the side-line.</li>
+        <li>Shared learning: Both heads use the same network, which has to learn the key features of the game. Asking the network to predict different key concepts about the game can help the network learn better.</li>
+      </ol>
+    </div>
+
+    <!-- <h2>Closing thoughts</h2>
+    <h3>Symmetries</h3>
+    <h3>Branching factor</h3> -->
+
+
+  </article>
+</div>
+<script src="../life.js"></script>
+</body>
+</html>

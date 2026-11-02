@@ -1,0 +1,94 @@
+:root { --bg:#fbfbf9; --ink:#20231f; --soft:#6a6f67; --line:#dfe0da; --accent:#1f5c4a; --h1:rgb(10, 95, 130); --h2:rgb(10, 95, 130); --h3:rgb(35, 95, 140); --h4:rgb(65, 75, 130); }
+@media (prefers-color-scheme: dark) {
+  /* :root:not([data-theme="light"]) { --bg:#161917; --ink:#e4e6e0; --soft:#979c93; --line:#30352f; --accent:#7cc3a9; } */
+  :root:not([data-theme="light"]) { --bg:#121413; --ink:#f0f3e7; --soft:#979c93; --line:#30352f; --accent:#8bd0b7; --h1:rgb(140, 225, 255); --h2:rgb(140, 225, 255); --h3:rgb(180, 225, 255); --h4:rgb(220, 225, 255); }
+}
+* { box-sizing:border-box; }
+html { scrollbar-gutter:stable; }
+body { margin:0; background:var(--bg); color:var(--ink); font:400 16px/1.55 "Libre Franklin", system-ui, sans-serif; }
+a { color:inherit; text-decoration-color:var(--line); text-underline-offset:3px; }
+a:hover { color:var(--accent); text-decoration-color:currentColor; }
+.page { display:grid; grid-template-columns:17rem minmax(0,1fr); max-width:60rem; min-height:100vh; margin:0 auto; padding:0 1.5rem; background:var(--bg); box-shadow:0 0 2.5rem 1.5rem var(--bg); }
+aside { position:sticky; top:0; align-self:start; padding:5rem 2rem 2rem 0; }
+h1 { font-size:1.35rem; font-weight:600; line-height:1.25; margin:0 0 1.6rem; letter-spacing:-.01em; }
+nav a { display:block; margin-bottom:.15rem; text-decoration:none; color:var(--soft); }
+nav a:hover { color:var(--accent); }
+nav a { position:relative; }
+nav a[aria-current] { color:var(--ink); }
+nav a[aria-current]::before { content:""; position:absolute; left:-.75rem; top:.2em; bottom:.2em; width:2px; background:var(--accent); }
+h2 { font-size:.85rem; font-weight:600; color:var(--soft); margin:2.2rem 0 .4rem; }
+.ext a { display:block; margin-bottom:.15rem; }
+main { border-left:1px solid var(--line); padding:5rem 0 3rem 3.5rem; }
+section[hidden] { display:none; }
+section > h2:first-child { margin-top:0; }
+.bio { font-size:1.15rem; line-height:1.5; margin:0; max-width:34rem; }
+.project { margin-bottom:1.3rem; }
+.project > a { font-weight:500; }
+.project p { margin:0; color:var(--soft); }
+#papers h2 { margin:2rem 0 .7rem; }
+#papers h2:first-child { margin-top:0; }
+.paper { margin:0 0 .85rem; line-height:1.4; }
+.paper small { display:block; color:var(--soft); font-size:.84rem; margin-top:.1rem; }
+@media (max-width:720px) {
+  .page { display:block; padding:0 1rem; }
+  aside { position:static; padding:2.5rem 0 1.4rem; }
+  h1 { margin-bottom:.8rem; }
+  nav, .ext { display:flex; flex-wrap:wrap; column-gap:1.2rem; }
+  h2 { margin-top:1.2rem; }
+  .ext h2 { width:100%; }
+  main { border-left:0; border-top:1px solid var(--line); padding:1.6rem 0 3rem; }
+}
+.life { position:fixed; top:0; z-index:-1; pointer-events:none; }
+.life[hidden] { display:none; }
+.life canvas { display:block; }
+.note-item { margin:0 0 .85rem; line-height:1.4; }
+.note-item small { display:block; color:var(--soft); font-size:.84rem; margin-top:.1rem; }
+
+/* A single note, in notes/ */
+.page.note { display:block; max-width:46rem; }
+.note header { padding:5rem 0 2rem; }
+.note .home { display:block; margin-bottom:2.5rem; color:var(--soft); text-decoration:none; }
+.note h1 { margin:0; font-size:1.9rem; color:var(--h1); }
+.note time { color:var(--soft); font-size:.84rem; }
+.note article { padding-bottom:5rem; }
+.note article h2 { font-size:1.6rem; line-height:1.25; color:var(--h2); margin:3rem 0 .6rem; }
+.note article hr { margin:3.5rem 0 2.5rem; border:0; border-top:1px solid var(--line); }
+.note article hr + h2 { margin-top:0; }
+.note article h2 + h3 { margin-top:1.4rem; }
+.note article h3 { font-size:1.3rem; line-height:1.3; color:var(--h3); margin:2.4rem 0 .4rem; }
+.note article h4 { font-size:1.1rem; color:var(--h4); margin:1.8rem 0 .3rem; }
+.note article p, .note article ul, .note article ol, .note article pre, .note article blockquote { margin:0 0 1rem; }
+.note article a { text-decoration-color:var(--soft); }
+.note blockquote { padding-left:1rem; border-left:2px solid var(--line); color:var(--soft); }
+.note code { font:.9em ui-monospace, Menlo, Consolas, monospace; }
+.note pre { padding:.8rem 1rem; overflow-x:auto; border:1px solid var(--line); line-height:1.4; }
+.note .remark { margin:1.5rem 0; padding:.8rem 1rem; background:color-mix(in srgb, var(--soft) 8%, transparent); border-radius:3px; color:var(--soft); font-size:.92rem; line-height:1.5; }
+.note .remark strong { display:block; color:var(--ink); font-weight:600; }
+.note .remark p { margin:0 0 .6rem; }
+.note .remark > :last-child { margin-bottom:0; }
+.note table { width:100%; margin:1.5rem 0; border-collapse:collapse; line-height:1.45; }
+.note th, .note td { padding:.5rem 1.5rem .5rem 0; text-align:left; vertical-align:top; border-bottom:1px solid var(--line); }
+.note th:last-child, .note td:last-child { padding-right:0; }
+.note th { color:var(--soft); font-size:.84rem; font-weight:600; }
+.note td:first-child { font-weight:500; white-space:nowrap; }
+.note .info { position:relative; border-bottom:1px dotted var(--soft); cursor:help; }
+.note .info > span { display:none; position:absolute; z-index:1; top:100%; left:0; width:18rem; margin-top:.3rem; padding:.5rem .7rem; background:var(--bg); border:1px solid var(--line); border-radius:3px; color:var(--ink); font-size:.84rem; font-weight:400; line-height:1.4; }
+.note .info:hover > span, .note .info:focus > span { display:block; }
+.note figure { margin:1.5rem 0; }
+.note img { display:block; max-width:100%; height:auto; }
+.note .images { display:flex; gap:1rem; align-items:flex-start; margin:1.5rem 0; }
+.note .images > * { flex:1; min-width:0; margin:0; }
+.note figcaption { color:var(--soft); font-size:.84rem; margin-top:.4rem; }
+@media (max-width:720px) {
+  .page.note { padding:0 1rem; }
+  .note header { padding-top:2.5rem; }
+  .note td:first-child { white-space:normal; }
+  .note .images { flex-direction:column; }
+  .note .images > * { width:100%; }
+}
+/* Without room in the margin for the box, it spans the text column instead. */
+@media (max-width:86rem) {
+  .note article { position:relative; }
+  .note .info { position:static; }
+  .note .info > span { top:auto; left:0; right:0; width:auto; margin-top:1.5rem; }
+}
