@@ -28,28 +28,78 @@
       <tr><th>Concept</th>  <th>Explanation</th></tr>
 
       <tr>
+        <td><a href="#Brandubh">Brandubh</a></td>
+        <td>The small 7x7 board game used as the example, where attackers try to capture a king before it escapes to a corner.</td>
+      </tr>
+
+      <tr>
         <td><a href="#MCTS">Monte Carlo Tree Search (MCTS)</a></td>
         <td>An algorithm for guided exploration of a game tree, looking for optimal actions.</td>
       </tr>
 
       <tr>
-        <td>MCTS simulations</td>
+        <td><a href="#simulations">MCTS simulations</a></td>
         <td>A single guided path-selection through the game tree, stopped after an unexplored move is reached.</td>
       </tr>
 
       <tr>
-        <td>Reinforcement Learning (RL)</td>
+        <td><a href="#RL">Reinforcement Learning (RL)</a></td>
         <td>A flexible machine learning method for training an agent in a defined environment on specific rewards (like winning games).</td>
       </tr>
 
       <tr>
-        <td>Board encoding</td>
+        <td><a href="#encoding">Board encoding</a></td>
         <td>Design decision on how to represent the game board, usually through one-hot encoding.</td>
       </tr>
 
       <tr>
-        <td>Move temperature ($\tau$)</td>
+        <td><a href="#temperature">Move temperature ($\tau$)</a></td>
         <td>Decides how likely non-top moves are to be played. $\tau=0$ deterministically plays the top recommended move.</td>
+      </tr>
+
+      <tr>
+        <td><a href="#zero">"Zero" engine</a></td>
+        <td>An engine that learns entirely from self-play, with no human games or game-specific advice.</td>
+      </tr>
+
+      <tr>
+        <td><a href="#heads">Policy head ($P$)</a></td>
+        <td>The network output that suggests which moves are worth exploring.</td>
+      </tr>
+
+      <tr>
+        <td><a href="#heads">Value head ($V$)</a></td>
+        <td>The network output that predicts which player is in the lead.</td>
+      </tr>
+
+      <tr>
+        <td><a href="#selection">Action value ($Q$)</a></td>
+        <td>The average value found below a move (how well that move has done so far).</td>
+      </tr>
+
+      <tr>
+        <td><a href="#UCB">Upper confidence bound ($U$)</a></td>
+        <td>An exploration bonus that favors moves the policy likes but the search has rarely visited.</td>
+      </tr>
+
+      <tr>
+        <td><a href="#RL">Self-play</a></td>
+        <td>The engine plays against itself to generate its own training data.</td>
+      </tr>
+
+      <tr>
+        <td><a href="#simulations">Backup</a></td>
+        <td>Passing a new evaluation back up the search path, updating the visit count and $Q$ at each node.</td>
+      </tr>
+
+      <tr>
+        <td><a href="#replay">Replay buffer</a></td>
+        <td>A store of recent positions that training samples from at random, so the network doesn't only learn from its latest games.</td>
+      </tr>
+
+      <tr>
+        <td><a href="#bootstrap">Value-policy bootstrap</a></td>
+        <td>How the two heads gradually teach each other, starting from an untrained network.</td>
       </tr>
 
 
@@ -65,7 +115,7 @@
     Because chess is such a thoroughly explored game, I will use another example: A little known game called <em>Brandubh</em>. If you are uninterested in this, simply skip ahead to <a href="#NN">Neural Networks</a>, it should be possible to follow the text without understanding Brandubh.
     </p>
 
-    <h3>"Zero" engines</h3>
+    <h3 id="zero">"Zero" engines</h3>
     <p>
       The setup I describe will produce a "zero" engine, like AlphaZero and Leela Chess. Zero refers to the fact that these engines are trained entirely on self-play, having "zero" direct human intervention. They are not trained on any human games, and there is no hard-coded "advice" or tactics from human experts embedded in the algorithm. There is always some debate about exactly where the zero-line is drawn, and what constitutes human intervention.
     </p>
@@ -108,7 +158,7 @@
 
     <hr>
     <h2 id="NN">2. The neural network engine</h2>
-    <h3>The policy and value heads</h3>
+    <h3 id="heads">The policy and value heads</h3>
     <p>
     At the center of the engine is a neural network which takes the current board state ($s$) as input and has (at least) two outputs, referred to as "heads":
     </p>
@@ -120,7 +170,7 @@
     An interesting insight is that the jobs of the value and policy heads are actually not that dissimilar: You could ask the value head what it thinks of the current board compared to the board after each of your legal moves. If the network is well trained, this should agree quite well with the moves recommended by the policy head. You could therefore ask yourself why not just have only a value head. One reason is that this would require running the NN on tens of different board states (i.e. 40 legal moves in the starting position of Brandubh), while the policy head gives you an indication from only a single forward pass. We will also see later that the policy and value heads do well in combination.
     </p>
 
-    <h3>Input and output encodings</h3>
+    <h3 id="encoding">Input and output encodings</h3>
     <p>
       A key part in neural network design is choosing a sensible <em>encoding</em>, which means how to represent its input and output.
     </p>
@@ -202,6 +252,7 @@
 
     <div class="remark">
       <p>
+        <strong>Nodes</strong>
         Each node is one board state, and each of its child nodes is a legal move (by the current player) from that board state. Note that the same board state can often be reached through multiple paths (i.e. lines of moves), but these will stay as separate entries in the node network.
       </p>
     </div>
@@ -211,7 +262,7 @@
       <figcaption>Illustration of MCTS simulation nr 3 and 4. The top node is the current position (root node), and the 3 child nodes are the 3 legal moves. Each simulation parses the tree using some selection mechanism, until it reaches an unexplored node (move). It then evaluates that node with the neural network. Note that every other horizontal layer is an <em>opponent</em> move.</figcaption>
     </figure>
 
-    <h3>Node selection</h3>
+    <h3 id="selection">Node selection</h3>
     <p>
       From the position of some parent node, how does the MCTS choose what move to explore next (what path down the node tree to take)? From a position $s$, it chooses the move $a$ that has the maximum sum $Q(s,a) + U(s,a)$. These two values can change dramatically as the search progresses, making the MCTS re-prioritize: The two values decide the moves, which again informs the values. This repeats for any desired number of simulations.
     </p>
@@ -223,7 +274,7 @@
       An unvisited node would get $Q=0/0$, and a common convention is to simply copy its parent's $Q$-value, saying that all child nodes are probably equally good as the parent node until we have checked.
     </p>
 
-    <h3>The upper confidence bound</h3>
+    <h3 id="UCB">The upper confidence bound</h3>
     <p>
       The <em>upper confidence bound</em> $U(s,a)$ is the <em>exploration</em> weight, i.e. how we judge positions we have not explored a lot yet. Different algorithms exist, and I will use the very common PUCT (Predictor + Upper Confidence bound applied to Trees) formula
       $$U(s,a) = c_\mathrm{puct} \cdot P(s,a) \cdot \frac{\sqrt{N(s)}}{1 + N(s,a)}.$$
@@ -243,7 +294,7 @@
     </p>
 
 
-    <h3>MCTS simulation summary</h3>
+    <h3 id="simulations">MCTS simulation summary</h3>
     <p>
       In summary, each MCTS simulation works as follows:
     </p>
@@ -283,7 +334,7 @@
     </p>
 
 
-    <h3> Temperature </h3>
+    <h3 id="temperature"> Temperature </h3>
     <p>
       During self-play training, we therefore introduce a <strong>temperature</strong> $\tau$. Instead of always choosing the highest visit count move, we draw a move with relative probability $\mathcal P(a) = N(s,a)^{1/\tau}$. Temperatures between 0 and 1 are common, and each make sense in their own regard: If the temperature is $\tau \rightarrow 0$, we are back to determinism. If $\tau = 1$, we are drawing a move with probabilities proportional to their visit counts. For a middle ground like $\tau = 0.5$, moves are prioritized with the square of their visit count, e.g. a move with 10 times lower visit count will have 100 times lower probability.
     </p>
@@ -309,7 +360,7 @@
 
 
     <hr>
-    <h2>4. Training the network through reinforcement learning</h2>
+    <h2 id="RL">4. Training the network through reinforcement learning</h2>
     <p>
       The main training loop is a repeating 2-step process:
     </p>
@@ -337,14 +388,14 @@
     </p>
 
 
-    <div class="remark">
+    <div class="remark" id="bootstrap">
       <strong>The value-policy bootstrap</strong>
       <p>
         The initial untrained network will simply recommend random moves, until one of its nodes hits the end of the game. The end of the game is hard-coded to +1/0/-1 regardless of what the value head says, so this information the policy can actually train on even before the value head understands a winning position. The value head will learn only from the actual game outcome. Even though the networks play randomly, the final positions before a win are likely better than average, so some actual information is learned. Even if the value head just learns what a completely won game looks like, this will start to propagate earlier into the game by the MCTS. As the network gets stronger, it starts seeing what mid-game positions more often end up in winning end-game positions, etc.
       </p>
     </div>
 
-    <h3>The replay buffer</h3>
+    <h3 id="replay">The replay buffer</h3>
     <p>
       A worry with the play-train loop described above is ending up in a rock-paper-scissors situation where the network learns to beat the narrow strategies employed by only the latest iteration of the network. We solve this by adding the generated positions into a large <em>replay buffer</em>, and drawing new positions randomly from this buffer. We then train on a random selection of positions from many iterations back. This can substantially increase training stability.
     </p>
