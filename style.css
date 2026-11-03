@@ -88,11 +88,16 @@ section > h2:first-child { margin-top:0; }
 .note button:hover { border-color:var(--accent); color:var(--accent); }
 .note button[aria-pressed="true"] { border-color:var(--accent); color:var(--accent); background:color-mix(in srgb, var(--accent) 12%, transparent); }
 .note button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+.note input[type="range"] { width:7rem; accent-color:var(--accent); vertical-align:middle; }
+.note .controls output { min-width:2.4rem; font-size:.9rem; font-variant-numeric:tabular-nums; }
 .note canvas { display:block; width:100%; }
 .note figure { margin:1.5rem 0; }
 .note img { display:block; max-width:100%; height:auto; }
 .note .images { display:flex; gap:1rem; align-items:flex-start; margin:1.5rem 0; }
 .note .images > * { flex:1; min-width:0; margin:0; }
+.note figure.widget { padding:.9rem 1.1rem .8rem; border:1px solid color-mix(in srgb, var(--line) 60%, transparent); border-radius:4px; background:color-mix(in srgb, var(--soft) 2.5%, transparent); }
+.note figure.widget .controls { margin:0 0 .1rem; }
+.note figure.widget figcaption { margin-top:.6rem; }
 .note figcaption { color:var(--soft); font-size:.84rem; margin-top:.4rem; }
 @media (max-width:720px) {
   .page.note { padding:0 1rem; }
