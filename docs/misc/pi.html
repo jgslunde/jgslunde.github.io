@@ -1,162 +1,166 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Humble Pi</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6" crossorigin="anonymous">
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js" integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf" crossorigin="anonymous"></script>
-    <script src="plotly-latest.min.js"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Humble Pi &ndash; Jonas G. S. Lunde</title>
+<meta name="description" content="Estimating pi by placing random points in a square and counting how many land inside the circle.">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../style.css">
 </head>
 <body>
-
+<div class="page note">
+  <header>
+    <a class="home" href="../../#projects">Jonas G. S. Lunde</a>
     <h1>Humble Pi</h1>
-    <h2> Number of points placed </h3>
-    <p id="n">0</p>
-    <h2> Current estimate of Pi </h3>
-    <p>(Equal to 4 times the number of points inside the circle, divided by total number of points)</p>
-    <p id="pi">0</p>
+  </header>
+  <article>
+    <p>Random points are placed in a square, and the circle inside it covers &pi;/4 of the square's area. Four times the fraction of points that land inside the circle is therefore an estimate of &pi;, which slowly gets better as more points are added.</p>
 
-    <h2> Speed </h3>
-    <button class="btn btn-primary" onclick="SloowFunction()">Sloooow</button>
-    <button class="btn btn-primary" onclick="SlowFunction()">Slow</button>
-    <button class="btn btn-primary" onclick="FastFunction()">Fast</button>
-    <button class="btn btn-primary" onclick="FaastFunction()">ZOOOOOM</button>
-
-    <div class="row">
-        <div class="col-6">
-            <div id="ScatterPlot" style="width:600px;height:600px;"></div>
-        </div>
-        <div class="col-6">
-            <div id="LinePlot" style="width:600px;height:600px;"></div>
-        </div>
+    <div class="readout">
+      <div><small>Points</small><span id="total">0</span></div>
+      <div><small>Inside the circle</small><span id="inside">0</span></div>
+      <div><small>Estimate of &pi;</small><span id="estimate">&ndash;</span></div>
     </div>
 
+    <div class="controls">
+      <span>Speed</span>
+      <button type="button" data-rate="10" aria-pressed="true">Slow</button>
+      <button type="button" data-rate="100">Medium</button>
+      <button type="button" data-rate="1000">Fast</button>
+      <button type="button" data-rate="10000">ZOOOOOM</button>
+      <span class="gap"></span>
+      <button type="button" id="pause">Pause</button>
+      <button type="button" id="reset">Reset</button>
+    </div>
 
+    <div class="images">
+      <figure>
+        <canvas id="square" aria-label="Random points in a square, with the circle drawn inside it"></canvas>
+      </figure>
+      <figure>
+        <canvas id="history" aria-label="The estimate of pi against the number of points"></canvas>
+      </figure>
+    </div>
+  </article>
+</div>
+<script>
+(() => {
+  const KEEP = 50000;  // points kept for redrawing; the square is solid long before this
+  const square = document.getElementById("square"), history = document.getElementById("history");
+  const buttons = [...document.querySelectorAll("[data-rate]")], pause = document.getElementById("pause");
+  const shown = { total: document.getElementById("total"), inside: document.getElementById("inside"), estimate: document.getElementById("estimate") };
+  let rate = 10, paused = false, owed = 0, last = null, total, inside, xs, ys, estimates, nextLog, colour;
+
+  function reset() {
+    total = 0; inside = 0; xs = []; ys = []; estimates = []; nextLog = 1;
+    drawSquare(); drawHistory(); show();
+  }
+
+  function colours() {
+    const css = getComputedStyle(document.documentElement);
+    colour = name => css.getPropertyValue(name).trim();
+  }
+
+  function fit(canvas) {
+    const size = canvas.clientWidth, ratio = devicePixelRatio || 1;
+    canvas.style.height = size + "px";
+    canvas.width = canvas.height = size * ratio;
+    const ctx = canvas.getContext("2d");
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    return [ctx, size];
+  }
+
+  function dot(ctx, size, x, y) {
+    const r = size < 400 ? 1.6 : 2.2, hit = x * x + y * y < 1;
+    ctx.globalAlpha = hit ? 1 : .55;
+    ctx.fillStyle = hit ? colour("--accent") : colour("--soft");
+    ctx.fillRect((x + 1) / 2 * size - r / 2, (1 - y) / 2 * size - r / 2, r, r);
+    ctx.globalAlpha = 1;
+  }
+
+  function drawSquare() {
+    const [ctx, size] = fit(square);
+    ctx.strokeStyle = colour("--line"); ctx.lineWidth = 1;
+    ctx.strokeRect(.5, .5, size - 1, size - 1);
+    for (let i = 0; i < xs.length; i++) dot(ctx, size, xs[i], ys[i]);
+    ctx.strokeStyle = colour("--ink"); ctx.globalAlpha = .6;
+    ctx.beginPath(); ctx.arc(size / 2, size / 2, size / 2 - .5, 0, 2 * Math.PI); ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
+  function drawHistory() {
+    const [ctx, size] = fit(history);
+    const left = 34, bottom = size - 22, top = 8, right = size - 8;
+    const lo = 2.6, hi = 3.7, maxN = Math.max(10, total);
+    const px = n => left + Math.log10(n) / Math.log10(maxN) * (right - left);
+    const py = v => bottom - (v - lo) / (hi - lo) * (bottom - top);
+    ctx.font = "11px 'Libre Franklin', system-ui, sans-serif"; ctx.fillStyle = colour("--soft");
+    ctx.strokeStyle = colour("--line"); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(left, top); ctx.lineTo(left, bottom); ctx.lineTo(right, bottom); ctx.stroke();
+    ctx.textAlign = "right"; ctx.textBaseline = "middle";
+    for (const v of [2.8, 3.0, 3.2, 3.4, 3.6]) ctx.fillText(v.toFixed(1), left - 6, py(v));
+    ctx.textAlign = "center"; ctx.textBaseline = "top";
+    for (let n = 1; n <= maxN; n *= 10) ctx.fillText(n >= 1e6 ? n / 1e6 + "M" : n >= 1e3 ? n / 1e3 + "k" : n, px(n), bottom + 6);
+    ctx.strokeStyle = colour("--soft"); ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(left, py(Math.PI)); ctx.lineTo(right, py(Math.PI)); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.strokeStyle = colour("--accent"); ctx.lineWidth = 1.5;
+    // The first few estimates are far off, so the line starts once it is inside the plot.
+    ctx.beginPath();
+    let drawing = false;
+    for (const [n, v] of estimates) {
+      const inRange = v >= lo && v <= hi;
+      if (inRange) drawing ? ctx.lineTo(px(n), py(v)) : ctx.moveTo(px(n), py(v));
+      drawing = inRange;
+    }
+    ctx.stroke();
+  }
+
+  function show() {
+    shown.total.textContent = total.toLocaleString("en");
+    shown.inside.textContent = inside.toLocaleString("en");
+    shown.estimate.textContent = total ? (4 * inside / total).toFixed(5) : "–";
+  }
+
+  function add(count) {
+    const ctx = square.getContext("2d"), size = square.clientWidth;
+    for (let k = 0; k < count; k++) {
+      const x = Math.random() * 2 - 1, y = Math.random() * 2 - 1;
+      total++; if (x * x + y * y < 1) inside++;
+      if (xs.length < KEEP) { xs.push(x); ys.push(y); dot(ctx, size, x, y); }
+      // Log-spaced samples keep the history short however long it runs.
+      if (total >= nextLog) { estimates.push([total, 4 * inside / total]); nextLog = Math.max(nextLog + 1, nextLog * 1.01); }
+    }
+  }
+
+  function frame(time) {
+    if (last !== null && !paused) {
+      owed += rate * Math.min(time - last, 250) / 1000;
+      const count = Math.floor(owed);
+      if (count) { owed -= count; add(count); drawHistory(); show(); }
+    }
+    last = time;
+    requestAnimationFrame(frame);
+  }
+
+  buttons.forEach(b => b.addEventListener("click", () => {
+    rate = +b.dataset.rate;
+    buttons.forEach(o => o.setAttribute("aria-pressed", o === b));
+  }));
+  pause.addEventListener("click", () => {
+    paused = !paused;
+    pause.textContent = paused ? "Resume" : "Pause";
+  });
+  document.getElementById("reset").addEventListener("click", reset);
+  addEventListener("resize", () => { drawSquare(); drawHistory(); });
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { colours(); drawSquare(); drawHistory(); });
+
+  colours(); reset();
+  requestAnimationFrame(frame);
+})();
+</script>
+<script src="../../life.js"></script>
 </body>
 </html>
-
-<script>
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-var n = 100;
-var x = [], y = [];
-var x_line = [], y_line = [];
-var inside = 0, total = 0;
-var i = 0;
-var dt = 0.015;
-var delay = 1000;
-
-function SloowFunction() {
-    delay = 1000;
-}
-function SlowFunction() {
-    delay = 400;
-}
-function FastFunction() {
-    delay = 100;
-}
-function FaastFunction() {
-    delay = 1;
-}
-
-
-Plotly.newPlot('ScatterPlot', [{
-    x: x,
-    y: y,
-    mode: 'markers'
-}], {
-    xaxis: {range: [-1.02, 1.02]},
-    yaxis: {range: [-1.02, 1.02]},
-    shapes: [
-    {
-        type: 'circle',
-        xref: 'x',
-        yref: 'y',
-        x0: -1,
-        y0: -1,
-        x1: 1,
-        y1: 1,
-        line: {
-            color: 'rgba(171, 50, 96, 1)'
-        }
-    },
-    ]
-})
-
-Plotly.newPlot('LinePlot', [{
-  x: x_line,
-  y: y_line,
-}], {
-    xaxis: {range: [0, 1]},
-    yaxis: {range: [2, 4.1]},
-    shapes: [
-    {
-        type: 'line',
-        x0: 0,
-        y0: 3.14,
-        x1: 10000,
-        y1: 3.14,
-        line:{
-            color: 'rgb(255, 0, 0)',
-            width: 4,
-            dash:'dot'
-        }
-    }
-    ]
-}
-)
-
-function compute () {
-    x[i] = Math.random()*2-1;
-    y[i] = Math.random()*2-1;
-    total = total + 1;
-    if(x[i]*x[i] + y[i]*y[i] < 1){
-        inside = inside + 1;
-    }
-    x_line[i] = i;
-    y_line[i] = 4*inside/total;
-    i = i + 1;
-    document.getElementById("pi").innerHTML = 4*inside/total;
-    document.getElementById("n").innerHTML = total;
-}
-
-async function update () {
-    await sleep(delay);
-    compute();
-
-  Plotly.animate('ScatterPlot', {
-    data: [{x: x, y: y}],
-    },
-    {
-    transition: {
-        duration: 0
-    },
-    frame: {
-        duration: 0,
-        redraw: false
-    },
-    });
-  
-  Plotly.animate('LinePlot', {
-    data: [{x: x_line, y: y_line}],
-    layout: {
-        xaxis: {range: [0, i+1]},
-        yaxis: {range: [2, 4.1]},
-    }
-    },
-    {
-    transition: {
-        duration: 0
-    },
-    frame: {
-        duration: 0,
-        redraw: false
-    },
-    });
-
-  requestAnimationFrame(update);
-}
-requestAnimationFrame(update);
-
-</script>
