@@ -24,7 +24,7 @@ def fetch(token):
     params = urllib.parse.urlencode(
         {"q": QUERY, "fl": FIELDS, "rows": 2000, "sort": "date desc, bibcode desc"})
     request = urllib.request.Request(
-        "https://api.adsabs.harvard.edu/v1/search/query?" + params,
+        "https://api.scixplorer.org/v1/search/query?" + params,
         headers={"Authorization": "Bearer " + token})
     with urllib.request.urlopen(request, timeout=60) as response:
         return json.load(response)["response"]["docs"]
@@ -68,7 +68,7 @@ def link(doc):
         return "https://doi.org/" + journal_doi(doc)
     if arxiv_id(doc):
         return "https://arxiv.org/abs/" + arxiv_id(doc)
-    return "https://ui.adsabs.harvard.edu/abs/" + doc["bibcode"]
+    return "https://scixplorer.org/abs/" + doc["bibcode"]
 
 
 def surname(author):
