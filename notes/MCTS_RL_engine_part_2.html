@@ -27,8 +27,53 @@
       <tr><th>Concept</th>  <th>Explanation</th></tr>
 
       <tr>
+        <td><a href="#FPU">First-play urgency (FPU)</a></td>
+        <td>What rule is used for the $Q$-value for un-seen moves, typically based upon the $Q$-value of its parent.</td>
+      </tr>
+      
+      <tr>
+        <td><a href="#auxiliary">Auxiliary targets</a></td>
+        <td>Training the network on additional information about the game, often just to improve its game intuition and training speed.</td>
+      </tr>
+
+      <tr>
         <td><a href="#dirichlet-noise">Dirichlet Noise</a></td>
         <td>A type of concentrated noise added to the root node policy head during training to encourage exploration of new moves.</td>
+      </tr>
+
+      <tr>
+        <td><a href="#forced-playouts">Forced playouts</a></td>
+        <td>Guaranteeing every root move a minimum number of visits based on its policy preference. The forced visits are pruned from the policy target afterwards.</td>
+      </tr>
+
+      <!-- <tr>
+        <td><a>Gumbel</a></td>
+        <td></td>
+      </tr> -->
+
+      <!-- <tr>
+        <td><a>Early stopping ("smart pruning")</a></td>
+        <td></td>
+      </tr> -->
+      
+      <!-- <tr>
+        <td><a>Symmetry augmentation</a></td>
+        <td></td>
+      </tr> -->
+
+      <tr>
+        <td><a href="#playout-cap">Playout cap randomization</a></td>
+        <td>Play only a small fraction of moves with full MCTS simulation depth, to faster produce a wider variety of games.</td>
+      </tr>
+      
+      <tr>
+        <td><a href="#value-bootstrap">Bootstrapped value targets</a></td>
+        <td>Train the value head also on the $Q$-value revealed by the MCTS, similar to how the policy is trained.</td>
+      </tr>
+
+      <tr>
+        <td><a href="#contempt">Draw contempt</a></td>
+        <td>Treating draws as a partial loss or win, when playing against a weaker or stronger opponent, respectively.</td>
       </tr>
 
     </table>
@@ -37,9 +82,52 @@
       This is Part 2 of my notes on MCTS RL board game engines, <a href="MCTS_RL_engine_part_1">Part 1 can be found here</a>.
     </p>
 
+    <h2 id="FPU">First-play Urgency (FPU) and FPU reduction</h2>
+    <p>
+      First-play <span class="info" tabindex="0">urgency<span>"Urgency" is an older name for the selection score of each move, so "first-play urgency" reads "the selection score of a move played for the first time"</span></span> is just the term for "What should the $Q$-value of un-visited moves be". As I pointed out in <a href="MCTS_RL_engine_part_1#selection">Part 1</a>, the formula produces $Q_\mathrm{child}^\mathrm{unseen}=0/0$ for un-visited moves.
+    </p>
+
+    <p>
+      AlphaGo Zero initialized all $Q$-values to 0, while AlphaZero treated un-visited moves as losses, $Q_\mathrm{child}^\mathrm{unseen}=-1$. Neither is a neutral statement: With 0, if you are far in the lead, the $Q$-values of explored nodes are all likely high, so any un-visited move looks bad and the search refuses to explore. The opposite happens if you're losing. With $-1$, the search is always deeply pessimistic about new moves, and relies completely on the exploration term $U$ to try them.
+    </p>
+
+    <p>
+      Leela Chess therefore introduced the FPU rule that each unseen $Q$-value is just a copy of its parent, saying "before we know anything we assume every move changes nothing about the standing of the game". This is a much more neutral statement than any fixed value.
+    </p>
+
+    <p>
+      Leela Chess then tuned the FPU with an <em>FPU reduction</em>, a number (typically something like 0.2) subtracted from the parent $Q$ value, i.e. $$Q_\mathrm{child}^\mathrm{unseen} = Q_\mathrm{parent} - 0.2.$$
+      The purpose of this is logical: In a game between two strong players most moves will be bad for you. Unless playing at a very low level, only a few moves are typically real options, and the average move from any position is likely to make you worse off. The FPU reduction simply reflects that. It is not meant as a direct brake on exploration, but rather a reality-orientation about what values we can reasonably expect from unexplored moves. The FPU reduction is often set low, or removed entirely, during self-play training, to allow for more exploration, but kept higher for real competitive play.
+    </p>
+
+
+
+    <h2 id="auxiliary">Auxiliary network targets</h2>
+    <p>
+      In addition to the mandatory value and policy heads, many engines train also on other output. Many of these are never used for anything, and are added simply to force the network to "think" about specific aspects of the game. Since the network is shared among all outputs, forcing the network to predict on some central concept of the game can improve other outputs as well.
+    </p>
+
+    <p>
+      <strong>Opponent's next move</strong><br>
+      Training the network on predicting the response from the opponent can help it better understand the consequences of its moves. KataGo found that it increased training speed.
+    </p>
+    <p>
+      <strong>Ownership</strong>
+      KataGo introduced an output predicting which player will control each square at the end of the game, which had significant impact on training speed. However, this is a Go-specific concept.
+    </p>
+    <p>
+      <strong>Moves left</strong><br>
+      Predicting how many moves are left of the game is a common network output, and is often used in the actual search itself. Leela Chess uses this output in its MCTS to slightly favor shorter wins over longer wins, avoiding endless shuffling of pieces.
+    </p>
+    <p>
+      <strong>Brandubh-specific suggestions</strong><br>
+      The auxiliary training targets should be tailored to the specific rules and goals of the game. For Brandubh we could imagine having the network predict which corner square the king will escape to. This would help the defenders realize where to focus their attention, and help the attackers realize what corner to guard better. For the attacker-victories the output could predict what square the king is captured on. One could also play around with predicting what squares will contain pieces in the future, or what squares will have its piece captured, in attempt to predict future board states. None of these suggestions would be used by the search itself, and would only exist to help the network learn game concepts faster and better.
+    </p>
+
+
     <h2 id="dirichlet-noise">Dirichlet Noise</h2>
     <p>
-      Dirichlet noise, introduced by AlphaGo Zero (2017), is a common way of improving the exploration of the MCTS simulations. It adds some noise to the policy head, $P(s,a)$, when it is evaluated at the root node (i.e. only the first move, not deeper moves). Dirichlet noise is similar to <em>temperature</em> in that they both add some randomness to the game, but they have different purposes:
+      Dirichlet noise, introduced by AlphaGo Zero (2017), is a common way of improving the exploration of the MCTS simulations. It adds some noise to the policy head, $P(s,a)$, when it is evaluated at the root node (i.e. only the first move, not deeper moves). Dirichlet noise is similar to <a href="MCTS_RL_engine_part_1#temperature"><em>temperature</em></a> in that they both add some randomness to the game, but they have different purposes:
     </p>
     <ul>
       <li>Dirichlet noise adds randomness to the <em>search</em>, forcing it to consider moves it would normally under-explore.</li>
@@ -167,23 +255,85 @@
     </p>
 
     <p>
-      To avoid this dilution, $\alpha$ is usually set to something around 0.1 times the typical number of legal moves in a game. AlphaZero uses $\alpha=0.3$ for Chess, 0.15 for Shoki, and 0.03 for Go, all approximately following this rule of thumb. Brandubh falls somewhere around Chess in terms of legal moves, with a slightly smaller board and fewer pieces, but with each piece typically having more moves. A value around 0.3 would probably work well for Brandubh too.
+      To avoid this dilution, $\alpha$ is usually set to roughly $10/n$, where $n$ is the typical number of legal moves in a game. AlphaZero uses $\alpha=0.3$ for Chess, 0.15 for Shogi, and 0.03 for Go, all approximately following this rule of thumb. Brandubh falls somewhere around Chess in terms of legal moves, with a slightly smaller board and fewer pieces, but with each piece typically having more moves. A value around 0.3 would probably work well for Brandubh too.
     </p>
 
     <p>
-      Dirichlet noise will slightly dilute the policy training target with bad moves, but the tradeoff is typically deemed worth it, and <span class="info" tabindex="0">the value head is unaffected<span>Demonstrating yet another advantage of having both a policy and a value head: The policy head can afford to be more exploratory and experimental when the value head is kept as a more pristine grounding.</span></span>. The upside is also huge: A policy network that has found a set of moves that works well will dedicate little time to exploration without something like Dirichlet noise, and the temperature won't select moves that the search refused to explore at all. A mechanism like Dirichlet noise is important for learning more complicated tactics at any sensible rate of efficiency.
+      Dirichlet noise will slightly dilute the policy training target with bad moves, but the tradeoff is typically deemed worth it, and <span class="info" tabindex="0">the value head is unaffected<span>Demonstrating yet another advantage of having both a policy and a value head: The policy head can afford to be more exploratory and experimental when the value head is kept as a more pristine grounding.</span></span>. The upside is also huge: A policy network that has found a set of moves that works well will dedicate little time to exploration without something like Dirichlet noise, and the temperature won't select moves that the search refused to explore at all. A mechanism like Dirichlet noise is important for learning more complicated tactics at any sensible rate of efficiency. KataGo takes this exploration a step further, with <a href="#forced-playouts">forced playouts</a>.
     </p>
 
-    <div class="remark">
-      <strong>When Dirichlet noise becomes too diluting</strong>
-      <p>
-        For games with very high branching factors, like Go, the dilution of the policy training target from the Dirichlet noise can get strong enough to impair training. KataGo partially mitigated this by keeping track of the extra visits imposed by the noise, and only keeping a fraction of them depending on how promising the moves look after-the-fact, judged by their $Q$-values.
-      </p>
-    </div>
+  <h2 id="forced-playouts">Forced playouts and policy target pruning</h2>
+  <p>
+    KataGo found that Dirichlet noise alone was often insufficient at exploring disfavored moves deep enough to discover hidden gems. If a side-move is initially judged as bad, either by the value head or the FPU rule, it will receive few visits even if the Dirichlet noise pushes the policy head towards it. 
+  </p>
+  <p>
+    KataGo therefore added <em>forced playouts</em>: Each root move is guaranteed at least $\sqrt{2\,P_\mathrm{Dir}(s,a)\,N(s)}$ visits, where $N(s)$ is the number of simulations performed so far. For every new simulation, the search checks if any root move has fallen below this threshold, and if it has, the next visit is forced to go to that move. The formula was an empirical design decision by KataGo, and isn't derived from any first principle. However, using the square root of $N$ means that the fraction of forced visits decreases as the simulations increase. Using the square root of $P$ boosts very low policy values, compared to using a formula that is linear in $P$.
+  </p>
+  <p>
+    Since $\sum_a \sqrt{P(s,a)} \leq \sqrt{n}$ for a position with $n$ legal moves, the total number of forced visits has an upper bound of $\sqrt{2 N n}$. Different types of games have wildly different typical numbers of legal moves. Go has an average of around 250 legal moves, while Chess and Brandubh are around 35. That means that, if 800 simulations are used, at most $\sqrt{2\cdot 800\cdot 35} \approx 237$ (about 30%) of them could be forced. That seems like an acceptable fraction. However, for Go, we would get $\sqrt{2\cdot 800\cdot 250} \approx 632$ (about 79%). This sounds high, but it's also an upper bound which assumes a flat prior, and the real number will be significantly lower when the policy is sharper, which is usually is. 
+  </p>
+  <p>
+    As far as I understand, there is no reason that this should be a strongly Go-specific improvement, but like Dirichlet noise it does put even more strain on the limited amount of MCTS simulations, and will likely work poorly with very few simulations. Note also that, like Dirichlet noise, forced playouts are only employed during self-play training, not during real competitive play.
+  </p>
 
-    
+  <p>
+    <strong>Policy target pruning</strong><br>
+    Since we are forcing the search to make a lot of visits it normally wouldn't make, we are now strongly polluting the policy training target. This problem was already weakly present with just Dirichlet noise, but then the search had the ability to quickly abort lines the value really didn't like. With forced playouts the problem is large enough that it needs a solution. KataGo employed <em>policy target pruning</em>: For every move except the most visited one, it removes forced visits until the move's $Q+U$ no longer exceeds that of the best move. Moves that turned out to be good keep their visits, while moves that were only visited because they were forced drop out of the target. The search gets more exploration, without diluting what the policy learns.
+  </p>
 
-    
+  
+  <h2 id="playout-cap">Playout cap randomization</h2>
+  <p>
+    Playout cap randomization aims to partially alleviate a tension between what sort of training data the policy and value heads need:
+  </p>
+  <ul>
+    <li>The value head would like a large and diverse set of different games. Each game gives only a single outcome, which is used to train the value head on every position in that game. Neighboring and similar positions do not contain as much independent information as moves from completely different games.</li>
+    <li>The policy head needs deep searches on individual positions, as shallow searches tend to just reproduce the existing policy prior. Deep searches mean slower game generation. It also benefits from diverse games, but is not as dependent on it as the value head, because it learns from its own search, not just the game outcome.</li>
+  </ul>
+
+  <p>
+    Playout cap randomization solves this dilemma the following way:
+  </p>
+  <ul>
+    <li>On a small random fraction of moves (KataGo used 25%) perform the full depth MCTS search, to e.g. 800 simulations. This gives the policy head proper depth to learn from.</li>
+    <li>On the majority of moves, use a shallow search (e.g. 100-200 simulations). The depth is meant to be high enough that the network doesn't play badly and produces low-quality games, but shallow enough to be very cheap compared to the full search. These moves are not recorded as training positions at all. Their only job is to move the game along cheaply, so that the full-search positions are spread across more, and more varied, games.</li>
+  </ul>
+  <p>
+    This setup produces new training positions <span class="info" tabindex="0">slower<span>With 25% full searches, each new training position now requires 800 + 3 x (100-200) simulations, so roughly 40%-75% more expensive to produce than the default implementation.</span></span>, but the positions will be significantly more diverse.
+  </p>
+  <p>
+    Playout cap randomization is perhaps most useful in games with a lot of moves per game, like Go, where the value head is more starved for unique games. It comes at the cost of slightly lower game quality, and higher generation cost per move, so it is not as obvious of a choice for shorter games, like Brandubh.
+  </p>
+
+
+  <h2 id="value-bootstrap">Bootstrapped value targets</h2>
+  <p>
+    When training its value head, Leela Chess borrows a trick from the policy head training: It trains the value head also on the final $Q$-value of the MCTS search at each position, in addition to game results. This feels partially circular, as the $Q$-value is decided <span class="info" tabindex="0">purely by the value head itself<span>Unless the search tree reaches terminal game states, then it is informed by actual game rules instead of just the value-head prediction.</span></span>, but the fact that the value-head is still also trained on game endings keeps it grounded.
+  </p>
+  <p>
+    The primary advantage in this bootstrapped value training is that it allows the precious little information we get from each game ending to propagate more efficiently to more positions. The MCTS search might discover that some move reaches positions it knows to be excellent (or horrible), because the value head has seen those positions before, and knows they always end in victory (or defeat). Normally, the value head would be unable to learn from this information if the actual game does not happen to take this path and follow them to their conclusion. With the bootstrap, the end-game information is allowed to more efficiently make its way to a wider set of positions.
+  </p>
+  <p>
+    Note also that if the MCTS search ends up producing a <a href="MCTS_RL_engine_part_1#selection">$Q$-value</a> that matches the initial guess of the value-head upon seeing the position, the value head is not trained in any direction. It's also worth noting that the partial circularity is real: The bootstrap is less stable than game outcome values, which are the only source of ground truth. If the value head has misconceptions or blind-spots about some game concepts those will simply be reinforced by the bootstrap, and can pull against new and corrected value targets trying to pull the value head in the right direction.
+  </p>
+
+  
+  <h2 id="contempt">Draw contempt</h2>
+  <p>
+    Draw contempt is an interesting trick in an attempt to alleviate a problem in high-level Chess play: Games between relatively even opponents very often end in draws. The trick, which predates AlphaZero-style engines and is also used by Stockfish, is simply to treat draws as a <em>partial loss</em> when playing against weaker opponents. This encourages the engine to play bolder lines, which in strict value-terms could be worse, but are less likely to lead to draws.
+  </p>
+  <p>
+    For our AlphaZero-style engines the trick requires a value head which produces separate win, draw, and loss output probabilities (see <a href="MCTS_RL_engine_part_1#RL">Part 1</a>), as opposed to a single value between -1 and +1. This illustrates the distinction between a value of 0 as "high draw probability" and as "even game".
+  </p>
+  <p>
+    Engines will typically decide the level of draw contempt from how much stronger or weaker their opponent is compared to them. It's also used in both directions:
+  </p>
+  <ul>
+    <li><b>Positive draw contempt</b> treats draws as partial losses, and is used against weaker opponents.</li>
+    <li><b>Negative draw contempt</b> treats draws as partial wins, and is used against stronger opponents.</li>
+  </ul>
+  
+
   </article>
 </div>
 <script src="../life.js"></script>
