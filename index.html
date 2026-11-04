@@ -8,80 +8,21 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+<script>
+  // The tabs used to live on this page, at addresses like #cv. Send old links to their own pages.
+  const moved = { "#notes": "side-projects", "#projects": "side-projects", "#cv": "cv", "#publications": "publications" }[location.hash];
+  if (moved) location.replace(moved);
+</script>
 </head>
 <body>
 <div class="page">
-  <aside>
-    <h1>Jonas G. S. Lunde</h1>
-    <p class="who">Postdoctoral Researcher,<br>Institute of Theoretical Astrophysics,<br>University of Oslo<br><a href="mailto:j.g.s.lunde@astro.uio.no">j.g.s.lunde@astro.uio.no</a></p>
-    <nav>
-      <a href="#about">About me</a>
-      <a href="#notes">Notes</a>
-      <a href="#projects">Projects</a>
-      <a href="#publications">Publications</a>
-    </nav>
-    <div class="ext">
-      <h2>External links</h2>
-      <a href="https://github.com/jgslunde" target="_blank" rel="noopener">GitHub</a>
-      <a href="https://orcid.org/0000-0002-7091-8779" target="_blank" rel="noopener">ORCID</a>
-      <a href="https://www.linkedin.com/in/j-g-s-lunde/" target="_blank" rel="noopener">LinkedIn</a>
-      <a href="https://scholar.google.com/citations?user=oaRBZ9kAAAAJ" target="_blank" rel="noopener">Google Scholar</a>
-      <a href="https://scixplorer.org/search/fq=%7B!type%3Daqp%20v%3D%24fq_database%7D&fq_database=(database%3Aastronomy%20OR%20database%3Aphysics)&q=(%3Dauthor%3A%22Lunde%2C%20J.%20G.%20S.%22%20OR%20%3Dauthor%3A%22Lunde%2C%20Jonas%20G.%20S.%22%20OR%20%3Dauthor%3A%22Lunde%2C%20Jonas%20Gahr%20Sturtzel%22%20OR%20%3Dauthor%3A%22Gahr%20Sturtzel%20Lunde%2C%20Jonas%22%20OR%20%3Dauthor%3A%22Sturtzel%20Lunde%2C%20Jonas%20Gahr%22%20OR%20orcid%3A0000-0002-7091-8779)&sort=date%20desc%2C%20bibcode%20desc&p_=0" target="_blank" rel="noopener">SciX</a>
-      <a href="https://arxiv.org/a/gslunde_j_1.html" target="_blank" rel="noopener">arXiv</a>
-      <a href="https://www.mn.uio.no/astro/english/people/aca/jonassl/" target="_blank" rel="noopener">University of Oslo</a>
-    </div>
-  </aside>
+  <script src="sidebar.js"></script>
   <main>
-    <section data-view="about">
+    <section>
       <p class="bio">Postdoctoral researcher in astrophysics at the Institute for Theoretical Astrophysics, University of Oslo. I work on line intensity mapping with the COMAP project, and global Bayesian CMB analysis with the Cosmoglobe collaboration.</p>
-    </section>
-    <section data-view="notes">
-      <!-- Newest first. Add one of these for each note:
-      <p class="note-item"><a href="notes/my-note.html">Note title</a><small>1 November 2026</small></p>
-      -->
-      <p class="note-item"><a href="notes/MCTS_RL_engine_part_2">An introduction to MCTS and RL in game engines (part 2)</a><small>3 November 2026</small></p>
-      <br>
-      <p class="note-item"><a href="notes/MCTS_RL_engine_part_1">An introduction to MCTS and RL in game engines (part 1)</a><small>2 November 2026</small></p>
-    </section>
-    <section data-view="projects">
-      <div class="project"><a href="https://jgslunde.github.io/Tafl_online/">Tafl board games</a>
-        <p>Tafl in the browser, against engines trained with reinforcement learning + MCTS. <a href="https://github.com/jgslunde/HnefataflOnlineGame">Source</a>, <a href="https://github.com/jgslunde/Tafl_RL">training code</a>.</p></div>
-      <div class="project"><a href="docs/misc/pi">Humble Pi</a>
-        <p>Estimating &pi; by placing random points in a circle.</p></div>
-      <div class="project"><a href="docs/ARISTOTLE.pdf">Summer school exoplanet proposal</a>
-        <p>Expoplanet satellite proposal, written during the Alpbach summer school, 2023.</p></div>
-      <div class="project"><a href="https://github.com/jgslunde/PythonPhysicsExercises">Physics exercises</a>
-        <p>Written for the introductory Python course IN1900 at UiO.</p></div>
-    </section>
-    <section data-view="publications">
-      <div id="papers"></div>
     </section>
   </main>
 </div>
-<script src="publications.js"></script>
-<script>
-  const papers = document.getElementById("papers");
-  [...new Set(PUBLICATIONS.map(p => p.y))].forEach(y => {
-    const h = document.createElement("h2");
-    h.textContent = y; papers.append(h);
-    PUBLICATIONS.filter(p => p.y === y).forEach(p => {
-      const row = document.createElement("p"), a = document.createElement("a"), s = document.createElement("small");
-      row.className = "paper"; a.href = p.u; a.textContent = p.t;
-      s.textContent = `${p.a}, ${p.v}`;
-      row.append(a, s); papers.append(row);
-    });
-  });
-
-  function route() {
-    const sections = [...document.querySelectorAll("main section")];
-    const current = sections.find(s => "#" + s.dataset.view === location.hash) || sections[0];
-    sections.forEach(s => s.hidden = s !== current);
-    document.querySelectorAll("nav a").forEach(a =>
-      a.getAttribute("href") === "#" + current.dataset.view ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current"));
-    scrollTo(0, 0);
-  }
-  addEventListener("hashchange", route); route();
-</script>
 <script src="life.js"></script>
 </body>
 </html>

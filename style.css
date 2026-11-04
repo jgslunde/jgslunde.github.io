@@ -8,8 +8,9 @@ html { scrollbar-gutter:stable; }
 body { margin:0; background:var(--bg); color:var(--ink); font:400 16px/1.55 "Libre Franklin", system-ui, sans-serif; }
 a { color:inherit; text-decoration-color:var(--line); text-underline-offset:3px; }
 a:hover { color:var(--accent); text-decoration-color:currentColor; }
-.page { display:grid; grid-template-columns:17rem minmax(0,1fr); max-width:60rem; min-height:100vh; margin:0 auto; padding:0 1.5rem; background:var(--bg); box-shadow:0 0 2.5rem 1.5rem var(--bg); }
+.page { display:grid; grid-template-columns:17rem minmax(0,1fr); max-width:64rem; min-height:100vh; margin:0 auto; padding:0 1.5rem; background:var(--bg); box-shadow:0 0 2.5rem 1.5rem var(--bg); }
 aside { position:sticky; top:0; align-self:start; padding:5rem 2rem 2rem 0; }
+aside h1 a { text-decoration:none; }
 h1 { font-size:1.35rem; font-weight:600; line-height:1.25; margin:0 0 1.6rem; letter-spacing:-.01em; }
 .who { margin:-1rem 0 1.6rem; color:var(--soft); font-size:.84rem; line-height:1.5; }
 nav a { display:block; margin-bottom:.15rem; text-decoration:none; color:var(--soft); }
@@ -19,8 +20,7 @@ nav a[aria-current] { color:var(--ink); }
 nav a[aria-current]::before { content:""; position:absolute; left:-.75rem; top:.2em; bottom:.2em; width:2px; background:var(--accent); }
 h2 { font-size:.85rem; font-weight:600; color:var(--soft); margin:2.2rem 0 .4rem; }
 .ext a { display:block; margin-bottom:.15rem; }
-main { border-left:1px solid var(--line); padding:5rem 0 3rem 3.5rem; }
-section[hidden] { display:none; }
+main { border-left:1px solid var(--line); padding:5rem 1.5rem 3rem 3.5rem; }
 section > h2:first-child { margin-top:0; }
 .bio { font-size:1.15rem; line-height:1.5; margin:0; max-width:34rem; }
 .project { margin-bottom:1.3rem; }
@@ -30,6 +30,15 @@ section > h2:first-child { margin-top:0; }
 #papers h2:first-child { margin-top:0; }
 .paper { margin:0 0 .85rem; line-height:1.4; }
 .paper small { display:block; color:var(--soft); font-size:.84rem; margin-top:.1rem; }
+.cv h3 { font-size:1rem; font-weight:600; margin:2.4rem 0 1rem; padding-bottom:.35rem; border-bottom:1px solid var(--line); }
+.cv h3:first-child { margin-top:0; }
+.cv-row { display:grid; grid-template-columns:5.6rem minmax(0,1fr); gap:.6rem; margin-bottom:1rem; line-height:1.4; }
+.cv-date { color:var(--soft); font-size:.84rem; padding-top:.15rem; font-variant-numeric:tabular-nums; }
+.cv-head { display:flex; justify-content:space-between; gap:1rem; }
+.cv-head b { font-weight:500; }
+.cv-head span { color:var(--soft); font-size:.9rem; text-align:right; white-space:nowrap; }
+.cv-row p { margin:.15rem 0 0; color:var(--soft); font-size:.9rem; }
+.cv-foot { margin-top:2.5rem; color:var(--soft); }
 @media (max-width:720px) {
   .page { display:block; padding:0 1rem; }
   aside { position:static; padding:2.5rem 0 1.4rem; }
@@ -38,13 +47,19 @@ section > h2:first-child { margin-top:0; }
   nav, .ext { display:flex; flex-wrap:wrap; column-gap:1.2rem; }
   h2 { margin-top:1.2rem; }
   .ext h2 { width:100%; }
+  .cv-row { grid-template-columns:1fr; gap:.1rem; }
+  .cv-head { display:block; }
+  .cv-head span { display:block; text-align:left; white-space:normal; }
   main { border-left:0; border-top:1px solid var(--line); padding:1.6rem 0 3rem; }
 }
 .life { position:fixed; top:0; z-index:-1; pointer-events:none; }
 .life[hidden] { display:none; }
 .life canvas { display:block; }
-.note-item { margin:0 0 .85rem; line-height:1.4; }
-.note-item small { display:block; color:var(--soft); font-size:.84rem; margin-top:.1rem; }
+.side-projects h2 { font-size:1.35rem; font-weight:600; color:var(--ink); margin:0 0 1rem; letter-spacing:-.01em; }
+main hr { margin:2rem 0; border:0; border-top:1px solid var(--line); }
+.note-list { list-style:none; margin:0; padding:0; }
+.note-list li { margin-bottom:.85rem; line-height:1.4; }
+.note-list small { display:block; color:var(--soft); font-size:.84rem; margin-top:.1rem; }
 
 /* A single note, in notes/ */
 .page.note { display:block; max-width:46rem; }

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Publications &ndash; Jonas G. S. Lunde</title>
+<meta name="description" content="Publications by Jonas G. S. Lunde.">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="page">
+  <script src="sidebar.js"></script>
+  <main>
+    <section>
+      <div id="papers"></div>
+    </section>
+  </main>
+</div>
+<script src="publications.js"></script>
+<script>
+  const papers = document.getElementById("papers");
+  [...new Set(PUBLICATIONS.map(p => p.y))].forEach(y => {
+    const h = document.createElement("h2");
+    h.textContent = y; papers.append(h);
+    PUBLICATIONS.filter(p => p.y === y).forEach(p => {
+      const row = document.createElement("p"), a = document.createElement("a"), s = document.createElement("small");
+      row.className = "paper"; a.href = p.u; a.target = "_blank"; a.rel = "noopener"; a.textContent = p.t;
+      s.textContent = `${p.a}, ${p.v}`;
+      row.append(a, s); papers.append(row);
+    });
+  });
+</script>
+<script src="life.js"></script>
+</body>
+</html>
